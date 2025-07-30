@@ -72,6 +72,17 @@ func (p *FSToS3Planner) Plan(ctx context.Context, source Source, dest Destinatio
 	items := Phase3GeneratePlan(phase1Result, checksums, source.Path, prefix)
 	p.logger.PhaseComplete("Phase3", len(items))
 
+	// Calculate checksums for upload items
+	for i, item := range items {
+		if item.Action == ActionUpload {
+			checksum, err := calculateFileChecksum(item.LocalPath)
+			if err != nil {
+				return nil, fmt.Errorf("failed to calculate checksum for %s: %w", item.LocalPath, err)
+			}
+			items[i].Checksum = checksum
+		}
+	}
+
 	return items, nil
 }
 

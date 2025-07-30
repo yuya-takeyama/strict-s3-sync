@@ -120,7 +120,7 @@ func (e *Executor) uploadFile(ctx context.Context, item planner.Item) error {
 		return err
 	}
 
-	err = e.client.PutObject(ctx, bucket, key, file, item.Size, "")
+	err = e.client.PutObject(ctx, bucket, key, file, item.Size, item.Checksum)
 	if err != nil {
 		return fmt.Errorf("failed to upload: %w", err)
 	}

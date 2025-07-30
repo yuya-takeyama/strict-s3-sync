@@ -59,6 +59,7 @@ type Item struct {
 	S3Key     string
 	Size      int64
 	Reason    string
+	Checksum  string
 }
 
 type PlanLogger interface {
