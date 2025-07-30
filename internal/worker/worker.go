@@ -9,9 +9,9 @@ import (
 	"sync/atomic"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
-	"github.com/yuya-takeyama/super-s3-sync/internal/checksum"
-	"github.com/yuya-takeyama/super-s3-sync/internal/plan"
-	"github.com/yuya-takeyama/super-s3-sync/internal/s3client"
+	"github.com/yuya-takeyama/strict-s3-sync/internal/checksum"
+	"github.com/yuya-takeyama/strict-s3-sync/internal/plan"
+	"github.com/yuya-takeyama/strict-s3-sync/internal/s3client"
 )
 
 const (

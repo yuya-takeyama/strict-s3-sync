@@ -8,9 +8,9 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/bmatcuk/doublestar/v4"
-	"github.com/yuya-takeyama/super-s3-sync/internal/checksum"
-	"github.com/yuya-takeyama/super-s3-sync/internal/s3client"
-	"github.com/yuya-takeyama/super-s3-sync/internal/walker"
+	"github.com/yuya-takeyama/strict-s3-sync/internal/checksum"
+	"github.com/yuya-takeyama/strict-s3-sync/internal/s3client"
+	"github.com/yuya-takeyama/strict-s3-sync/internal/walker"
 )
 
 // Action represents a sync action

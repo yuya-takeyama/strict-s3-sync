@@ -9,11 +9,11 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/spf13/cobra"
-	"github.com/yuya-takeyama/super-s3-sync/internal/logging"
-	"github.com/yuya-takeyama/super-s3-sync/internal/plan"
-	"github.com/yuya-takeyama/super-s3-sync/internal/s3client"
-	"github.com/yuya-takeyama/super-s3-sync/internal/walker"
-	"github.com/yuya-takeyama/super-s3-sync/internal/worker"
+	"github.com/yuya-takeyama/strict-s3-sync/internal/logging"
+	"github.com/yuya-takeyama/strict-s3-sync/internal/plan"
+	"github.com/yuya-takeyama/strict-s3-sync/internal/s3client"
+	"github.com/yuya-takeyama/strict-s3-sync/internal/walker"
+	"github.com/yuya-takeyama/strict-s3-sync/internal/worker"
 )
 
 type syncConfig struct {
@@ -31,9 +31,9 @@ func main() {
 	var cfg syncConfig
 
 	rootCmd := &cobra.Command{
-		Use:   "super-s3-sync <LocalPath> <S3Uri>",
+		Use:   "strict-s3-sync <LocalPath> <S3Uri>",
 		Short: "Sync files from local to S3 with SHA-256 based comparison",
-		Long:  `A fast S3 sync tool that uses SHA-256 checksums for accurate synchronization.`,
+		Long:  `A strict S3 sync tool that uses SHA-256 checksums for accurate synchronization.`,
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg.localPath = args[0]

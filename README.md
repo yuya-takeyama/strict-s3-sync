@@ -1,11 +1,11 @@
-# super-s3-sync
+# strict-s3-sync
 
-A fast S3 sync tool that uses SHA-256 checksums for accurate synchronization. Unlike traditional sync tools that rely on timestamps or ETags, this tool ensures data integrity by comparing SHA-256 checksums.
+A strict S3 sync tool that uses SHA-256 checksums for accurate synchronization. Unlike traditional sync tools that rely on timestamps or ETags, this tool ensures data integrity by comparing SHA-256 checksums.
 
 ## Features
 
 - **SHA-256 based synchronization**: Uses S3's native ChecksumSHA256 for accurate file comparison
-- **High performance**: Concurrent uploads/deletes with configurable parallelism
+- **Concurrent operations**: Uploads/deletes with configurable parallelism
 - **Smart sync**: Only transfers files that have actually changed
 - **Exclude patterns**: Support for glob patterns (including `**` wildcards)
 - **Delete synchronization**: Optionally remove files from S3 that don't exist locally
@@ -14,21 +14,21 @@ A fast S3 sync tool that uses SHA-256 checksums for accurate synchronization. Un
 ## Installation
 
 ```bash
-go install github.com/yuya-takeyama/super-s3-sync/cmd/super-s3-sync@latest
+go install github.com/yuya-takeyama/strict-s3-sync/cmd/strict-s3-sync@latest
 ```
 
 Or build from source:
 
 ```bash
-git clone https://github.com/yuya-takeyama/super-s3-sync
-cd super-s3-sync
-go build -o super-s3-sync ./cmd/super-s3-sync
+git clone https://github.com/yuya-takeyama/strict-s3-sync
+cd strict-s3-sync
+go build -o strict-s3-sync ./cmd/strict-s3-sync
 ```
 
 ## Usage
 
 ```bash
-super-s3-sync <LocalPath> <S3Uri> [options]
+strict-s3-sync <LocalPath> <S3Uri> [options]
 ```
 
 ### Options
@@ -44,22 +44,22 @@ super-s3-sync <LocalPath> <S3Uri> [options]
 
 Basic sync:
 ```bash
-super-s3-sync ./local-folder s3://my-bucket/prefix/
+strict-s3-sync ./local-folder s3://my-bucket/prefix/
 ```
 
 Sync with exclusions:
 ```bash
-super-s3-sync ./local-folder s3://my-bucket/prefix/ --exclude "*.tmp" --exclude "**/.git/**"
+strict-s3-sync ./local-folder s3://my-bucket/prefix/ --exclude "*.tmp" --exclude "**/.git/**"
 ```
 
 Sync with deletion:
 ```bash
-super-s3-sync ./local-folder s3://my-bucket/prefix/ --delete
+strict-s3-sync ./local-folder s3://my-bucket/prefix/ --delete
 ```
 
 Dry run to preview changes:
 ```bash
-super-s3-sync ./local-folder s3://my-bucket/prefix/ --delete --dryrun
+strict-s3-sync ./local-folder s3://my-bucket/prefix/ --delete --dryrun
 ```
 
 ## How it Works

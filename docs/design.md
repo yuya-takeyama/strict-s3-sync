@@ -1,8 +1,8 @@
-# super-s3-sync Design Document
+# strict-s3-sync Design Document
 
 ## Overview
 
-This document outlines the design principles and architecture of super-s3-sync, a high-performance S3 synchronization tool that uses SHA-256 checksums for accurate file comparison.
+This document outlines the design principles and architecture of strict-s3-sync, a strict S3 synchronization tool that uses SHA-256 checksums for accurate file comparison.
 
 ### Why SHA-256?
 
@@ -375,6 +375,73 @@ When needed, the following planners can be implemented using the same interface:
 - Split large directories into chunks
 - Generate plans concurrently
 - Merge results for execution
+
+## CLI Design
+
+### Command Interface
+
+The CLI follows the same interface as `aws s3 sync` for familiarity and ease of adoption:
+
+```bash
+strict-s3-sync <LocalPath> <S3Uri> [options]
+```
+
+### Core Options (MVP)
+
+These options are implemented first to match essential `aws s3 sync` functionality:
+
+| Option | Description | AWS Compatibility |
+|--------|-------------|-------------------|
+| `--dryrun` | Shows operations without executing | Same as `aws s3 sync` |
+| `--delete` | Delete dest files not in source | Same as `aws s3 sync` |
+| `--exclude <pattern>` | Exclude patterns (multiple allowed) | Same as `aws s3 sync` |
+| `--include <pattern>` | Include patterns (multiple allowed) | Same as `aws s3 sync` |
+| `--quiet` | Suppress non-error output | Similar to `aws s3 sync` |
+
+### Additional Options
+
+Options specific to strict-s3-sync:
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--concurrency <n>` | Number of concurrent operations | 32 |
+| `--skip-missing-checksum` | Skip files without S3 checksums | false |
+
+### Option Naming Philosophy
+
+- Follow `aws s3 sync` conventions exactly (e.g., `--dryrun` not `--dry-run`)
+- This ensures muscle memory works for AWS CLI users
+- Document any deviations clearly
+
+### Examples
+
+```bash
+# Basic sync
+strict-s3-sync ./local s3://bucket/prefix/
+
+# Preview changes
+strict-s3-sync ./local s3://bucket/prefix/ --dryrun
+
+# Sync with deletion
+strict-s3-sync ./local s3://bucket/prefix/ --delete
+
+# Complex exclusions
+strict-s3-sync ./local s3://bucket/prefix/ \
+  --exclude "*.tmp" \
+  --exclude ".git/*" \
+  --exclude "node_modules/**"
+```
+
+### Future CLI Options
+
+To maintain compatibility with `aws s3 sync`, these may be added later:
+
+- `--size-only`: Skip checksum comparison
+- `--exact-timestamps`: Use exact timestamp comparison
+- `--no-progress`: Disable progress output
+- `--storage-class`: Set S3 storage class
+- `--sse`: Server-side encryption options
+- `--acl`: Access control list settings
 
 ## Implementation Guide
 
