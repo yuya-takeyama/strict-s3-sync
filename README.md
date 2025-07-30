@@ -1,1 +1,112 @@
 # super-s3-sync
+
+A fast S3 sync tool that uses SHA-256 checksums for accurate synchronization. Unlike traditional sync tools that rely on timestamps or ETags, this tool ensures data integrity by comparing SHA-256 checksums.
+
+## Features
+
+- **SHA-256 based synchronization**: Uses S3's native ChecksumSHA256 for accurate file comparison
+- **High performance**: Concurrent uploads/deletes with configurable parallelism
+- **Smart sync**: Only transfers files that have actually changed
+- **Exclude patterns**: Support for glob patterns (including `**` wildcards)
+- **Delete synchronization**: Optionally remove files from S3 that don't exist locally
+- **Dry run mode**: Preview changes before applying them
+
+## Installation
+
+```bash
+go install github.com/yuya-takeyama/super-s3-sync/cmd/super-s3-sync@latest
+```
+
+Or build from source:
+
+```bash
+git clone https://github.com/yuya-takeyama/super-s3-sync
+cd super-s3-sync
+go build -o super-s3-sync ./cmd/super-s3-sync
+```
+
+## Usage
+
+```bash
+super-s3-sync <LocalPath> <S3Uri> [options]
+```
+
+### Options
+
+- `--exclude <pattern>`: Exclude patterns (can be specified multiple times)
+- `--delete`: Delete files in destination that don't exist in source
+- `--dryrun`: Show what would be done without actually doing it
+- `--concurrency <n>`: Number of concurrent operations (default: 32)
+- `--region <region>`: AWS region (uses default if not specified)
+- `--quiet`: Suppress output
+
+### Examples
+
+Basic sync:
+```bash
+super-s3-sync ./local-folder s3://my-bucket/prefix/
+```
+
+Sync with exclusions:
+```bash
+super-s3-sync ./local-folder s3://my-bucket/prefix/ --exclude "*.tmp" --exclude "**/.git/**"
+```
+
+Sync with deletion:
+```bash
+super-s3-sync ./local-folder s3://my-bucket/prefix/ --delete
+```
+
+Dry run to preview changes:
+```bash
+super-s3-sync ./local-folder s3://my-bucket/prefix/ --delete --dryrun
+```
+
+## How it Works
+
+1. **Local Scan**: Recursively scans the local directory, applying exclude patterns
+2. **S3 Listing**: Lists all objects in the S3 destination
+3. **Comparison**:
+   - New files (not in S3) → Upload
+   - Different sizes → Upload
+   - Same size → Compare SHA-256 checksums
+4. **Execution**: Performs uploads/deletes in parallel
+
+## SHA-256 Checksum Handling
+
+- For uploads, S3's native ChecksumSHA256 is used
+- Files without checksums are re-uploaded by default (natural backfill)
+- Multipart uploads also maintain SHA-256 checksums
+
+## Required AWS Permissions
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "s3:ListBucket",
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::your-bucket",
+        "arn:aws:s3:::your-bucket/*"
+      ]
+    }
+  ]
+}
+```
+
+## Performance Tips
+
+- Adjust `--concurrency` based on your network and S3 rate limits
+- Use `--exclude` patterns to skip unnecessary files
+- For large files (>64MB), automatic multipart upload is used
+
+## License
+
+MIT
