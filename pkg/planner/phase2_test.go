@@ -3,11 +3,11 @@ package planner
 import (
 	"context"
 	"fmt"
-	"path/filepath"
+	"path"
 	"reflect"
 	"testing"
 
-	"github.com/yuya-takeyama/super-s3-sync/pkg/s3client"
+	"github.com/yuya-takeyama/strict-s3-sync/pkg/s3client"
 )
 
 func TestPhase2CollectChecksums(t *testing.T) {
@@ -147,7 +147,7 @@ func TestPhase2CollectChecksums(t *testing.T) {
 			prefix:    "path/to/files",
 			mockSetup: func(m *mockS3Client) {
 				m.headObjectFunc = func(ctx context.Context, bucket, key string) (*s3client.ObjectInfo, error) {
-					if bucket == "test-bucket" && key == filepath.Join("path/to/files", "hello.txt") {
+					if bucket == "test-bucket" && key == path.Join("path/to/files", "hello.txt") {
 						return &s3client.ObjectInfo{
 							Size:     13,
 							Checksum: "nested-checksum",

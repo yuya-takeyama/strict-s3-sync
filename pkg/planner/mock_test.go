@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/yuya-takeyama/super-s3-sync/pkg/s3client"
+	"github.com/yuya-takeyama/strict-s3-sync/pkg/s3client"
 )
 
 // mockS3Client is a mock implementation of s3client.Client for testing

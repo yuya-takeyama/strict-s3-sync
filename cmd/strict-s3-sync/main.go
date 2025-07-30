@@ -9,10 +9,10 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/spf13/cobra"
-	"github.com/yuya-takeyama/super-s3-sync/pkg/executor"
-	"github.com/yuya-takeyama/super-s3-sync/pkg/logger"
-	"github.com/yuya-takeyama/super-s3-sync/pkg/planner"
-	"github.com/yuya-takeyama/super-s3-sync/pkg/s3client"
+	"github.com/yuya-takeyama/strict-s3-sync/pkg/executor"
+	"github.com/yuya-takeyama/strict-s3-sync/pkg/logger"
+	"github.com/yuya-takeyama/strict-s3-sync/pkg/planner"
+	"github.com/yuya-takeyama/strict-s3-sync/pkg/s3client"
 )
 
 var (

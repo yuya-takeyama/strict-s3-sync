@@ -1,6 +1,7 @@
 package planner
 
 import (
+	"path"
 	"path/filepath"
 	"sort"
 
@@ -67,7 +68,7 @@ func Phase3GeneratePlan(phase1 Phase1Result, checksums []ChecksumData, localBase
 		items = append(items, Item{
 			Action:    ActionUpload,
 			LocalPath: filepath.Join(localBase, ref.Path),
-			S3Key:     filepath.Join(s3Prefix, ref.Path),
+			S3Key:     path.Join(s3Prefix, ref.Path),
 			Size:      ref.Size,
 			Reason:    "new file",
 		})
@@ -77,7 +78,7 @@ func Phase3GeneratePlan(phase1 Phase1Result, checksums []ChecksumData, localBase
 		items = append(items, Item{
 			Action:    ActionUpload,
 			LocalPath: filepath.Join(localBase, ref.Path),
-			S3Key:     filepath.Join(s3Prefix, ref.Path),
+			S3Key:     path.Join(s3Prefix, ref.Path),
 			Size:      ref.Size,
 			Reason:    "size differs",
 		})
@@ -94,7 +95,7 @@ func Phase3GeneratePlan(phase1 Phase1Result, checksums []ChecksumData, localBase
 				items = append(items, Item{
 					Action:    ActionUpload,
 					LocalPath: filepath.Join(localBase, ref.Path),
-					S3Key:     filepath.Join(s3Prefix, ref.Path),
+					S3Key:     path.Join(s3Prefix, ref.Path),
 					Size:      ref.Size,
 					Reason:    "checksum differs",
 				})
@@ -106,7 +107,7 @@ func Phase3GeneratePlan(phase1 Phase1Result, checksums []ChecksumData, localBase
 		items = append(items, Item{
 			Action:    ActionDelete,
 			LocalPath: "",
-			S3Key:     filepath.Join(s3Prefix, ref.Path),
+			S3Key:     path.Join(s3Prefix, ref.Path),
 			Size:      ref.Size,
 			Reason:    "deleted locally",
 		})

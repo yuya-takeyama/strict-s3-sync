@@ -7,10 +7,11 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
-	"github.com/yuya-takeyama/super-s3-sync/pkg/s3client"
+	"github.com/yuya-takeyama/strict-s3-sync/pkg/s3client"
 )
 
 type FSToS3Planner struct {
@@ -136,7 +137,7 @@ func (p *FSToS3Planner) Phase2CollectChecksums(ctx context.Context, items []Item
 			return nil, fmt.Errorf("failed to calculate checksum for %s: %w", localPath, err)
 		}
 
-		s3Key := filepath.Join(prefix, item.Path)
+		s3Key := path.Join(prefix, item.Path)
 		objInfo, err := p.client.HeadObject(ctx, bucket, s3Key)
 		if err != nil {
 			return nil, fmt.Errorf("failed to head object %s: %w", s3Key, err)

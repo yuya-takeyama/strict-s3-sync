@@ -7,8 +7,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/yuya-takeyama/super-s3-sync/pkg/planner"
-	"github.com/yuya-takeyama/super-s3-sync/pkg/s3client"
+	"github.com/yuya-takeyama/strict-s3-sync/pkg/planner"
+	"github.com/yuya-takeyama/strict-s3-sync/pkg/s3client"
 )
 
 type ExecutionLogger interface {

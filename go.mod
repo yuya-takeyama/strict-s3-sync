@@ -1,4 +1,4 @@
-module github.com/yuya-takeyama/super-s3-sync
+module github.com/yuya-takeyama/strict-s3-sync
 
 go 1.22
 
