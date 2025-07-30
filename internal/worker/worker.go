@@ -16,7 +16,7 @@ import (
 
 const (
 	multipartThreshold = 64 * 1024 * 1024 // 64MB
-	partSize          = 8 * 1024 * 1024  // 8MB
+	partSize           = 8 * 1024 * 1024  // 8MB
 )
 
 // Result represents the result of a sync operation
@@ -108,7 +108,7 @@ func (p *Pool) worker(ctx context.Context, bucket string, jobs <-chan plan.Item,
 // upload handles file upload
 func (p *Pool) upload(ctx context.Context, bucket string, item plan.Item) (string, error) {
 	output := fmt.Sprintf("upload: %s to s3://%s/%s", item.LocalPath, bucket, item.S3Key)
-	
+
 	if !p.quiet {
 		fmt.Println(output)
 	}
@@ -166,7 +166,7 @@ func (p *Pool) multipartUpload(ctx context.Context, bucket string, item plan.Ite
 		}
 
 		// Upload part
-		partResp, err := p.client.UploadPart(ctx, bucket, item.S3Key, uploadID, partNumber, 
+		partResp, err := p.client.UploadPart(ctx, bucket, item.S3Key, uploadID, partNumber,
 			&bytesReader{data: partData[:n]}, int64(n))
 		if err != nil {
 			uploadErr = fmt.Errorf("upload part %d: %w", partNumber, err)
@@ -179,7 +179,7 @@ func (p *Pool) multipartUpload(ctx context.Context, bucket string, item plan.Ite
 		})
 
 		partNumber++
-		
+
 		if err == io.EOF || err == io.ErrUnexpectedEOF {
 			break
 		}
@@ -202,7 +202,7 @@ func (p *Pool) multipartUpload(ctx context.Context, bucket string, item plan.Ite
 // delete handles object deletion
 func (p *Pool) delete(ctx context.Context, bucket string, item plan.Item) (string, error) {
 	output := fmt.Sprintf("delete: s3://%s/%s", bucket, item.S3Key)
-	
+
 	if !p.quiet {
 		fmt.Println(output)
 	}

@@ -325,15 +325,15 @@ func (c *Client) isRetryableError(err error) bool {
 func (c *Client) calculateDelay(attempt int) time.Duration {
 	base := float64(c.baseDelay)
 	delay := base * math.Pow(2.0, float64(attempt))
-	
+
 	// Add jitter (±25%)
 	jitter := delay * 0.25 * (2*rand.Float64() - 1)
 	delay += jitter
-	
+
 	// Cap at maxDelay
 	if delay > float64(c.maxDelay) {
 		delay = float64(c.maxDelay)
 	}
-	
+
 	return time.Duration(delay)
 }

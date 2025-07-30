@@ -131,15 +131,15 @@ func (w *Walker) isExcluded(path string) bool {
 func GetS3Key(prefix, relPath string) string {
 	// Convert to forward slashes
 	s3Path := filepath.ToSlash(relPath)
-	
+
 	if prefix == "" {
 		return s3Path
 	}
-	
+
 	// Ensure prefix ends with /
 	if !strings.HasSuffix(prefix, "/") {
 		prefix += "/"
 	}
-	
+
 	return prefix + s3Path
 }

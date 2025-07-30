@@ -24,24 +24,24 @@ const (
 
 // Item represents a sync plan item
 type Item struct {
-	Action       Action
-	LocalPath    string // Full path for upload
-	S3Key        string
-	Size         int64
-	Reason       string // Why this action was chosen
+	Action         Action
+	LocalPath      string // Full path for upload
+	S3Key          string
+	Size           int64
+	Reason         string // Why this action was chosen
 	ChecksumSHA256 string // For uploads, calculated on demand
 }
 
 // Planner creates sync plans
 type Planner struct {
-	client           *s3client.Client
+	client              *s3client.Client
 	skipMissingChecksum bool
 }
 
 // NewPlanner creates a new planner
 func NewPlanner(client *s3client.Client, skipMissingChecksum bool) *Planner {
 	return &Planner{
-		client:           client,
+		client:              client,
 		skipMissingChecksum: skipMissingChecksum,
 	}
 }
@@ -83,11 +83,11 @@ func (p *Planner) Plan(ctx context.Context, localFiles []walker.FileInfo, bucket
 	}
 
 	var items []Item
-	
+
 	// Process local files
 	for s3Key, localFile := range localMap {
 		remote, exists := remoteMap[s3Key]
-		
+
 		if !exists {
 			// New file
 			items = append(items, Item{

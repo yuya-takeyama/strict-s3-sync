@@ -47,3 +47,9 @@ testdata/
 
 # aqua
 .aqua/
+
+# Claude Code related files (should not be in this repo)
+cc-slack
+data/
+logs/
+migrations/

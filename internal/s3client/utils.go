@@ -13,7 +13,7 @@ func ParseS3URI(uri string) (bucket, prefix string, err error) {
 
 	path := strings.TrimPrefix(uri, "s3://")
 	parts := strings.SplitN(path, "/", 2)
-	
+
 	if len(parts) == 0 || parts[0] == "" {
 		return "", "", fmt.Errorf("invalid S3 URI: missing bucket name")
 	}
