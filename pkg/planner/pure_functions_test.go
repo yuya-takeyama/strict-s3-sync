@@ -332,3 +332,125 @@ func TestPhase3GeneratePlan(t *testing.T) {
 		})
 	}
 }
+
+func TestIsExcluded(t *testing.T) {
+	tests := []struct {
+		name     string
+		path     string
+		patterns []string
+		want     bool
+		wantErr  bool
+	}{
+		{
+			name:     "no patterns",
+			path:     "file.txt",
+			patterns: []string{},
+			want:     false,
+			wantErr:  false,
+		},
+		{
+			name:     "simple match",
+			path:     "test.tmp",
+			patterns: []string{"*.tmp"},
+			want:     true,
+			wantErr:  false,
+		},
+		{
+			name:     "simple no match",
+			path:     "test.txt",
+			patterns: []string{"*.tmp"},
+			want:     false,
+			wantErr:  false,
+		},
+		{
+			name:     "multiple patterns with match",
+			path:     "test.tmp",
+			patterns: []string{"*.log", "*.tmp", "*.bak"},
+			want:     true,
+			wantErr:  false,
+		},
+		{
+			name:     "multiple patterns no match",
+			path:     "test.txt",
+			patterns: []string{"*.log", "*.tmp", "*.bak"},
+			want:     false,
+			wantErr:  false,
+		},
+		{
+			name:     "directory match",
+			path:     "node_modules/package.json",
+			patterns: []string{"node_modules/**"},
+			want:     true,
+			wantErr:  false,
+		},
+		{
+			name:     "nested directory match",
+			path:     "src/test/data.tmp",
+			patterns: []string{"**/*.tmp"},
+			want:     true,
+			wantErr:  false,
+		},
+		{
+			name:     "exact path match",
+			path:     "config/secret.key",
+			patterns: []string{"config/secret.key"},
+			want:     true,
+			wantErr:  false,
+		},
+		{
+			name:     "directory prefix without wildcard",
+			path:     "temp/file.txt",
+			patterns: []string{"temp/"},
+			want:     false,
+			wantErr:  false,
+		},
+		{
+			name:     "directory prefix with wildcard",
+			path:     "temp/file.txt",
+			patterns: []string{"temp/*"},
+			want:     true,
+			wantErr:  false,
+		},
+		{
+			name:     "complex pattern",
+			path:     "src/components/Button.test.tsx",
+			patterns: []string{"**/*.test.*"},
+			want:     true,
+			wantErr:  false,
+		},
+		{
+			name:     "case sensitive",
+			path:     "File.TXT",
+			patterns: []string{"*.txt"},
+			want:     false,
+			wantErr:  false,
+		},
+		{
+			name:     "hidden files",
+			path:     ".git/config",
+			patterns: []string{".git/**"},
+			want:     true,
+			wantErr:  false,
+		},
+		{
+			name:     "hidden file pattern",
+			path:     ".env",
+			patterns: []string{".*"},
+			want:     true,
+			wantErr:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := IsExcluded(tt.path, tt.patterns)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("IsExcluded() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("IsExcluded() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

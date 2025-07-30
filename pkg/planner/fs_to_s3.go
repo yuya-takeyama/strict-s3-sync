@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/bmatcuk/doublestar/v4"
 	"github.com/yuya-takeyama/super-s3-sync/pkg/s3client"
 )
 
@@ -95,7 +94,7 @@ func (p *FSToS3Planner) gatherLocalFiles(basePath string, excludes []string) ([]
 
 		relPath = filepath.ToSlash(relPath)
 
-		excluded, err := isExcluded(relPath, excludes)
+		excluded, err := IsExcluded(relPath, excludes)
 		if err != nil {
 			return err
 		}
@@ -173,18 +172,6 @@ func parseS3URI(uri string) (bucket, prefix string, err error) {
 	return bucket, prefix, nil
 }
 
-func isExcluded(path string, patterns []string) (bool, error) {
-	for _, pattern := range patterns {
-		matched, err := doublestar.Match(pattern, path)
-		if err != nil {
-			return false, err
-		}
-		if matched {
-			return true, nil
-		}
-	}
-	return false, nil
-}
 
 func calculateFileChecksum(path string) (string, error) {
 	file, err := os.Open(path)

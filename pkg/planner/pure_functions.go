@@ -3,6 +3,8 @@ package planner
 import (
 	"path/filepath"
 	"sort"
+
+	"github.com/bmatcuk/doublestar/v4"
 )
 
 func Phase1Compare(source []ItemMetadata, dest []ItemMetadata, deleteEnabled bool) Phase1Result {
@@ -132,4 +134,17 @@ func sortPhase1Result(result *Phase1Result) {
 	sortItemRefs(result.SizeMismatch)
 	sortItemRefs(result.NeedChecksum)
 	sortItemRefs(result.Identical)
+}
+
+func IsExcluded(path string, patterns []string) (bool, error) {
+	for _, pattern := range patterns {
+		matched, err := doublestar.Match(pattern, path)
+		if err != nil {
+			return false, err
+		}
+		if matched {
+			return true, nil
+		}
+	}
+	return false, nil
 }
