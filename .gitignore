@@ -44,3 +44,6 @@ tmp/
 
 # Test data
 testdata/
+
+# aqua
+.aqua/
