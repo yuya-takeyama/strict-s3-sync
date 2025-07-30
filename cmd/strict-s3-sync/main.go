@@ -3,171 +3,141 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/spf13/cobra"
-	"github.com/yuya-takeyama/strict-s3-sync/internal/logging"
-	"github.com/yuya-takeyama/strict-s3-sync/internal/plan"
-	"github.com/yuya-takeyama/strict-s3-sync/internal/s3client"
-	"github.com/yuya-takeyama/strict-s3-sync/internal/walker"
-	"github.com/yuya-takeyama/strict-s3-sync/internal/worker"
+	"github.com/yuya-takeyama/super-s3-sync/pkg/executor"
+	"github.com/yuya-takeyama/super-s3-sync/pkg/logger"
+	"github.com/yuya-takeyama/super-s3-sync/pkg/planner"
+	"github.com/yuya-takeyama/super-s3-sync/pkg/s3client"
 )
 
-type syncConfig struct {
-	localPath   string
-	s3URI       string
-	excludes    []string
-	delete      bool
+var (
 	dryRun      bool
-	concurrency int
-	region      string
+	deleteFlag  bool
+	excludes    []string
+	includes    []string
 	quiet       bool
-}
+	concurrency int
+)
 
 func main() {
-	var cfg syncConfig
-
 	rootCmd := &cobra.Command{
 		Use:   "strict-s3-sync <LocalPath> <S3Uri>",
-		Short: "Sync files from local to S3 with SHA-256 based comparison",
-		Long:  `A strict S3 sync tool that uses SHA-256 checksums for accurate synchronization.`,
-		Args:  cobra.ExactArgs(2),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			cfg.localPath = args[0]
-			cfg.s3URI = args[1]
-
-			if err := validateConfig(&cfg); err != nil {
-				return err
-			}
-
-			ctx := context.Background()
-			return run(ctx, &cfg)
-		},
+		Short: "Strict S3 synchronization tool using SHA-256 checksums",
+		Long: `strict-s3-sync is a reliable S3 sync tool that uses SHA-256 checksums
+for accurate file comparison, ensuring data integrity.`,
+		Args: cobra.ExactArgs(2),
+		RunE: run,
 	}
 
-	rootCmd.Flags().StringSliceVar(&cfg.excludes, "exclude", nil, "Exclude patterns (can be specified multiple times)")
-	rootCmd.Flags().BoolVar(&cfg.delete, "delete", false, "Delete files in destination that don't exist in source")
-	rootCmd.Flags().BoolVar(&cfg.dryRun, "dryrun", false, "Show what would be done without actually doing it")
-	rootCmd.Flags().IntVar(&cfg.concurrency, "concurrency", 32, "Number of concurrent operations")
-	rootCmd.Flags().StringVar(&cfg.region, "region", "", "AWS region (uses default if not specified)")
-	rootCmd.Flags().BoolVar(&cfg.quiet, "quiet", false, "Suppress output")
+	rootCmd.Flags().BoolVar(&dryRun, "dryrun", false, "Shows operations without executing")
+	rootCmd.Flags().BoolVar(&deleteFlag, "delete", false, "Delete dest files not in source")
+	rootCmd.Flags().StringSliceVar(&excludes, "exclude", nil, "Exclude patterns (multiple allowed)")
+	rootCmd.Flags().StringSliceVar(&includes, "include", nil, "Include patterns (multiple allowed)")
+	rootCmd.Flags().BoolVar(&quiet, "quiet", false, "Suppress non-error output")
+	rootCmd.Flags().IntVar(&concurrency, "concurrency", 32, "Number of concurrent operations")
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
 }
 
-func validateConfig(cfg *syncConfig) error {
-	if cfg.localPath == "" {
-		return fmt.Errorf("local path is required")
+func run(cmd *cobra.Command, args []string) error {
+	localPath := args[0]
+	s3URI := args[1]
+
+	if !strings.HasPrefix(s3URI, "s3://") {
+		return fmt.Errorf("second argument must be an S3 URI (s3://bucket/prefix)")
 	}
 
-	if !strings.HasPrefix(cfg.s3URI, "s3://") {
-		return fmt.Errorf("S3 URI must start with s3://")
-	}
+	ctx := context.Background()
 
-	if cfg.concurrency <= 0 {
-		return fmt.Errorf("concurrency must be positive")
-	}
-
-	return nil
-}
-
-func run(ctx context.Context, cfg *syncConfig) error {
-	startTime := time.Now()
-	logger := logging.NewLogger(cfg.quiet)
-
-	// Parse S3 URI
-	bucket, prefix, err := s3client.ParseS3URI(cfg.s3URI)
+	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to load AWS config: %w", err)
 	}
 
-	logger.Info("Syncing %s to s3://%s/%s", cfg.localPath, bucket, prefix)
+	s3Client := s3client.NewAWSClient(cfg)
 
-	// Create AWS config
-	awsCfg, err := config.LoadDefaultConfig(ctx)
+	var planLogger planner.PlanLogger
+	if quiet {
+		planLogger = &logger.NullLogger{}
+	} else {
+		planLogger = &logger.VerboseLogger{}
+	}
+
+	plnr := planner.NewFSToS3Planner(s3Client, planLogger)
+
+	source := planner.Source{
+		Type: planner.SourceTypeFileSystem,
+		Path: localPath,
+	}
+
+	dest := planner.Destination{
+		Type: planner.DestTypeS3,
+		Path: s3URI,
+	}
+
+	opts := planner.Options{
+		DeleteEnabled: deleteFlag,
+		Excludes:      excludes,
+		Logger:        planLogger,
+	}
+
+	log.Println("Generating sync plan...")
+	items, err := plnr.Plan(ctx, source, dest, opts)
 	if err != nil {
-		return fmt.Errorf("load AWS config: %w", err)
-	}
-	if cfg.region != "" {
-		awsCfg.Region = cfg.region
+		return fmt.Errorf("failed to generate plan: %w", err)
 	}
 
-	// Create S3 client
-	client := s3client.NewClient(awsCfg)
-
-	// Walk local files
-	fileWalker, err := walker.NewWalker(cfg.localPath, cfg.excludes)
-	if err != nil {
-		return fmt.Errorf("create walker: %w", err)
-	}
-
-	localFiles, err := fileWalker.Walk()
-	if err != nil {
-		return fmt.Errorf("walk files: %w", err)
-	}
-
-	logger.Info("Found %d local files", len(localFiles))
-
-	// Create sync plan
-	planner := plan.NewPlanner(client, false) // skipMissingChecksum = false by default
-	s3KeyFunc := func(relPath string) string {
-		return walker.GetS3Key(prefix, relPath)
-	}
-
-	syncPlan, err := planner.Plan(ctx, localFiles, bucket, prefix, s3KeyFunc, cfg.delete, cfg.excludes)
-	if err != nil {
-		return fmt.Errorf("create sync plan: %w", err)
-	}
-
-	// Log plan summary
-	var uploadCount, deleteCount int
-	for _, item := range syncPlan {
-		switch item.Action {
-		case plan.ActionUpload:
-			uploadCount++
-		case plan.ActionDelete:
-			deleteCount++
+	if len(items) == 0 {
+		if !quiet {
+			log.Println("No changes needed")
 		}
-	}
-
-	logger.Info("Plan: %d uploads, %d deletes", uploadCount, deleteCount)
-
-	if len(syncPlan) == 0 {
-		logger.Info("Nothing to sync")
 		return nil
 	}
 
-	// Execute plan
-	pool := worker.NewPool(client, cfg.concurrency, cfg.quiet, cfg.dryRun)
-	results, err := pool.Execute(ctx, syncPlan, bucket)
-	if err != nil {
-		return fmt.Errorf("execute sync: %w", err)
+	if dryRun {
+		fmt.Println("(dryrun) The following operations would be performed:")
+		for _, item := range items {
+			switch item.Action {
+			case planner.ActionUpload:
+				fmt.Printf("upload: %s to s3://%s (%s)\n", item.LocalPath, item.S3Key, item.Reason)
+			case planner.ActionDelete:
+				fmt.Printf("delete: s3://%s (%s)\n", item.S3Key, item.Reason)
+			}
+		}
+		return nil
 	}
 
-	// Calculate stats
-	var stats worker.Stats
-	worker.UpdateStats(&stats, results)
+	var execLogger executor.ExecutionLogger
+	if quiet {
+		execLogger = &executor.QuietLogger{}
+	} else {
+		execLogger = &executor.VerboseLogger{}
+	}
 
-	// Print errors
-	var hasErrors bool
+	exec := executor.NewExecutor(s3Client, execLogger, concurrency)
+	results := exec.Execute(ctx, items)
+
+	var failed int
 	for _, result := range results {
 		if result.Error != nil {
-			hasErrors = true
-			logger.Error("%s: %v", result.Item.S3Key, result.Error)
+			failed++
+			log.Printf("Error: %s: %v", result.Item.S3Key, result.Error)
 		}
 	}
 
-	// Print summary
-	duration := time.Since(startTime)
-	logger.PrintSummary(stats.Uploaded, stats.Deleted, stats.Errors, stats.BytesUploaded, duration)
+	if failed > 0 {
+		return fmt.Errorf("%d operations failed", failed)
+	}
 
-	if hasErrors {
-		return fmt.Errorf("sync completed with %d errors", stats.Errors)
+	if !quiet {
+		log.Printf("Successfully completed %d operations", len(results))
 	}
 
 	return nil
