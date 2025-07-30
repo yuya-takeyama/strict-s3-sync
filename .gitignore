@@ -43,7 +43,7 @@ tmp/
 *.tmp
 
 # Test data
-testdata/
+# testdata/  # Go projects typically commit testdata directories
 
 # aqua
 .aqua/
