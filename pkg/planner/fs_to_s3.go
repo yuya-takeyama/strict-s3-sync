@@ -172,7 +172,6 @@ func parseS3URI(uri string) (bucket, prefix string, err error) {
 	return bucket, prefix, nil
 }
 
-
 func calculateFileChecksum(path string) (string, error) {
 	file, err := os.Open(path)
 	if err != nil {
