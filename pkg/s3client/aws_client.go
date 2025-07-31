@@ -81,13 +81,17 @@ func (c *AWSClient) HeadObject(ctx context.Context, bucket, key string) (*Object
 	return info, nil
 }
 
-func (c *AWSClient) PutObject(ctx context.Context, bucket, key string, body io.Reader, size int64, checksum string) error {
+func (c *AWSClient) PutObject(ctx context.Context, bucket, key string, body io.Reader, size int64, checksum string, contentType string) error {
 	input := &s3.PutObjectInput{
 		Bucket:            aws.String(bucket),
 		Key:               aws.String(key),
 		Body:              body,
 		ContentLength:     aws.Int64(size),
 		ChecksumAlgorithm: types.ChecksumAlgorithmCrc64nvme,
+	}
+	
+	if contentType != "" {
+		input.ContentType = aws.String(contentType)
 	}
 
 	_, err := c.client.PutObject(ctx, input)

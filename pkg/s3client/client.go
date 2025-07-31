@@ -16,7 +16,7 @@ type ItemMetadata struct {
 type Client interface {
 	ListObjects(ctx context.Context, bucket, prefix string) ([]ItemMetadata, error)
 	HeadObject(ctx context.Context, bucket, key string) (*ObjectInfo, error)
-	PutObject(ctx context.Context, bucket, key string, body io.Reader, size int64, checksum string) error
+	PutObject(ctx context.Context, bucket, key string, body io.Reader, size int64, checksum string, contentType string) error
 	DeleteObject(ctx context.Context, bucket, key string) error
 }
 
