@@ -52,14 +52,23 @@ func (p *FSToS3Planner) Plan(ctx context.Context, source Source, dest Destinatio
 		return nil, fmt.Errorf("failed to list S3 objects: %w", err)
 	}
 
-	s3Objects := make([]ItemMetadata, len(s3ClientObjects))
-	for i, obj := range s3ClientObjects {
-		s3Objects[i] = ItemMetadata{
+	s3Objects := []ItemMetadata{}
+	for _, obj := range s3ClientObjects {
+		// Apply exclude patterns to S3 objects
+		excluded, err := IsExcluded(obj.Path, opts.Excludes)
+		if err != nil {
+			return nil, fmt.Errorf("failed to check exclude pattern for %s: %w", obj.Path, err)
+		}
+		if excluded {
+			continue
+		}
+		
+		s3Objects = append(s3Objects, ItemMetadata{
 			Path:     obj.Path,
 			Size:     obj.Size,
 			ModTime:  obj.ModTime,
 			Checksum: obj.Checksum,
-		}
+		})
 	}
 
 	phase1Result := Phase1Compare(localFiles, s3Objects, opts.DeleteEnabled)
