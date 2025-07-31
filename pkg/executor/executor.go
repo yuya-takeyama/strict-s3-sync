@@ -121,7 +121,14 @@ func (e *Executor) uploadFile(ctx context.Context, item planner.Item) error {
 	}
 
 	contentType := guessContentType(item.LocalPath)
-	err = e.client.PutObject(ctx, bucket, key, file, item.Size, item.Checksum, contentType)
+	err = e.client.PutObject(ctx, &s3client.PutObjectRequest{
+		Bucket:      bucket,
+		Key:         key,
+		Body:        file,
+		Size:        item.Size,
+		Checksum:    item.Checksum,
+		ContentType: contentType,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to upload: %w", err)
 	}

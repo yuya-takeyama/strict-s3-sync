@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"io"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -81,17 +80,17 @@ func (c *AWSClient) HeadObject(ctx context.Context, bucket, key string) (*Object
 	return info, nil
 }
 
-func (c *AWSClient) PutObject(ctx context.Context, bucket, key string, body io.Reader, size int64, checksum string, contentType string) error {
+func (c *AWSClient) PutObject(ctx context.Context, req *PutObjectRequest) error {
 	input := &s3.PutObjectInput{
-		Bucket:            aws.String(bucket),
-		Key:               aws.String(key),
-		Body:              body,
-		ContentLength:     aws.Int64(size),
+		Bucket:            aws.String(req.Bucket),
+		Key:               aws.String(req.Key),
+		Body:              req.Body,
+		ContentLength:     aws.Int64(req.Size),
 		ChecksumAlgorithm: types.ChecksumAlgorithmCrc64nvme,
 	}
-	
-	if contentType != "" {
-		input.ContentType = aws.String(contentType)
+
+	if req.ContentType != "" {
+		input.ContentType = aws.String(req.ContentType)
 	}
 
 	_, err := c.client.PutObject(ctx, input)

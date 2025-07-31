@@ -3,7 +3,6 @@ package planner
 import (
 	"context"
 	"fmt"
-	"io"
 
 	"github.com/yuya-takeyama/strict-s3-sync/pkg/s3client"
 )
@@ -12,7 +11,7 @@ import (
 type mockS3Client struct {
 	listObjectsFunc  func(ctx context.Context, bucket, prefix string) ([]s3client.ItemMetadata, error)
 	headObjectFunc   func(ctx context.Context, bucket, key string) (*s3client.ObjectInfo, error)
-	putObjectFunc    func(ctx context.Context, bucket, key string, body io.Reader, size int64, checksum string, contentType string) error
+	putObjectFunc    func(ctx context.Context, req *s3client.PutObjectRequest) error
 	deleteObjectFunc func(ctx context.Context, bucket, key string) error
 }
 
@@ -30,9 +29,9 @@ func (m *mockS3Client) HeadObject(ctx context.Context, bucket, key string) (*s3c
 	return nil, fmt.Errorf("HeadObject not implemented")
 }
 
-func (m *mockS3Client) PutObject(ctx context.Context, bucket, key string, body io.Reader, size int64, checksum string, contentType string) error {
+func (m *mockS3Client) PutObject(ctx context.Context, req *s3client.PutObjectRequest) error {
 	if m.putObjectFunc != nil {
-		return m.putObjectFunc(ctx, bucket, key, body, size, checksum, contentType)
+		return m.putObjectFunc(ctx, req)
 	}
 	return fmt.Errorf("PutObject not implemented")
 }

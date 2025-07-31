@@ -10,11 +10,11 @@ func guessContentType(filename string) string {
 	if ext == "" {
 		return ""
 	}
-	
+
 	contentType := mime.TypeByExtension(ext)
 	if contentType == "" {
 		return ""
 	}
-	
+
 	return contentType
 }
