@@ -2,13 +2,15 @@
 
 ## Overview
 
-This document outlines the design principles and architecture of strict-s3-sync, a strict S3 synchronization tool that uses SHA-256 checksums for accurate file comparison.
+This document outlines the design principles and architecture of strict-s3-sync, a strict S3 synchronization tool that uses CRC64NVME checksums for accurate file comparison.
 
-### Why SHA-256?
+### Why CRC64NVME?
 
-- **Content-based verification**: Unlike timestamp-based sync, SHA-256 ensures files are identical by comparing actual content
-- **S3 native support**: S3 supports ChecksumSHA256 natively, avoiding the need for custom metadata
-- **Reliability**: Cryptographic hash prevents false matches and ensures data integrity
+- **Content-based verification**: Unlike timestamp-based sync, CRC64NVME ensures files are identical by comparing actual content
+- **S3 native support**: S3 supports ChecksumCRC64NVME natively, avoiding the need for custom metadata
+- **Reliability**: Robust checksum algorithm prevents false matches and ensures data integrity
+- **Performance**: Hardware-accelerated computation for faster checksum calculation
+- **Full object checksums**: Avoids composite checksum issues with multipart uploads, ensuring consistent comparisons
 
 ### Key Goals
 
@@ -272,7 +274,7 @@ phase1Result := Phase1Compare(localFiles, s3Objects, deleteEnabled)
 
 // Phase 2: I/O for checksums
 checksums := Phase2CollectChecksums(ctx, phase1Result.NeedChecksum, 
-    SourceType_FileSystem,  // Will calculate SHA-256 from files
+    SourceType_FileSystem,  // Will calculate CRC64NVME from files
     DestType_S3)           // Will use HeadObject to get checksums
 
 // Phase 3: Pure plan generation
@@ -288,7 +290,7 @@ results := executor.Execute(finalPlan)
 // Same structure, but Phase 2 behaves differently:
 checksums := Phase2CollectChecksums(ctx, phase1Result.NeedChecksum,
     SourceType_S3,          // Will use HeadObject to get checksums
-    DestType_FileSystem)    // Will calculate SHA-256 from files
+    DestType_FileSystem)    // Will calculate CRC64NVME from files
 
 // The rest remains identical
 ```

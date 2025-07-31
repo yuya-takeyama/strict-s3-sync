@@ -1,10 +1,10 @@
 # strict-s3-sync
 
-A strict S3 sync tool that uses SHA-256 checksums for accurate synchronization. Unlike traditional sync tools that rely on timestamps or ETags, this tool ensures data integrity by comparing SHA-256 checksums.
+A strict S3 sync tool that uses CRC64NVME checksums for accurate synchronization. Unlike traditional sync tools that rely on timestamps or ETags, this tool ensures data integrity by comparing CRC64NVME checksums.
 
 ## Features
 
-- **SHA-256 based synchronization**: Uses S3's native ChecksumSHA256 for accurate file comparison
+- **CRC64NVME based synchronization**: Uses S3's native ChecksumCRC64NVME for accurate file comparison
 - **Concurrent operations**: Uploads/deletes with configurable parallelism
 - **Smart sync**: Only transfers files that have actually changed
 - **Exclude patterns**: Support for glob patterns (including `**` wildcards)
@@ -69,14 +69,15 @@ strict-s3-sync ./local-folder s3://my-bucket/prefix/ --delete --dryrun
 3. **Comparison**:
    - New files (not in S3) → Upload
    - Different sizes → Upload
-   - Same size → Compare SHA-256 checksums
+   - Same size → Compare CRC64NVME checksums
 4. **Execution**: Performs uploads/deletes in parallel
 
-## SHA-256 Checksum Handling
+## CRC64NVME Checksum Handling
 
-- For uploads, S3's native ChecksumSHA256 is used
+- For uploads, S3's native ChecksumCRC64NVME is used
 - Files without checksums are re-uploaded by default (natural backfill)
-- Multipart uploads also maintain SHA-256 checksums
+- Multipart uploads maintain full object checksums (avoiding composite checksum issues)
+- Hardware-accelerated for better performance
 
 ## Required AWS Permissions
 
