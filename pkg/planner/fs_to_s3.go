@@ -2,9 +2,9 @@ package planner
 
 import (
 	"context"
-	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"hash/crc64"
 	"io"
 	"os"
 	"path"
@@ -13,6 +13,9 @@ import (
 
 	"github.com/yuya-takeyama/strict-s3-sync/pkg/s3client"
 )
+
+// CRC64NVME polynomial as per AWS S3 specification
+var crc64NVMETable = crc64.MakeTable(0xAD93D23594C93659)
 
 type FSToS3Planner struct {
 	client s3client.Client
@@ -62,7 +65,7 @@ func (p *FSToS3Planner) Plan(ctx context.Context, source Source, dest Destinatio
 		if excluded {
 			continue
 		}
-		
+
 		s3Objects = append(s3Objects, ItemMetadata{
 			Path:     obj.Path,
 			Size:     obj.Size,
@@ -204,7 +207,7 @@ func calculateFileChecksum(path string) (string, error) {
 	}
 	defer file.Close()
 
-	hash := sha256.New()
+	hash := crc64.New(crc64NVMETable)
 	if _, err := io.Copy(hash, file); err != nil {
 		return "", err
 	}

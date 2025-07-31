@@ -3,7 +3,6 @@ package s3client
 import (
 	"context"
 	"encoding/base64"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"strings"
@@ -72,8 +71,8 @@ func (c *AWSClient) HeadObject(ctx context.Context, bucket, key string) (*Object
 		Size: aws.ToInt64(resp.ContentLength),
 	}
 
-	if resp.ChecksumSHA256 != nil {
-		decoded, err := base64.StdEncoding.DecodeString(*resp.ChecksumSHA256)
+	if resp.ChecksumCRC64NVME != nil {
+		decoded, err := base64.StdEncoding.DecodeString(*resp.ChecksumCRC64NVME)
 		if err == nil {
 			info.Checksum = fmt.Sprintf("%x", decoded)
 		}
@@ -84,18 +83,11 @@ func (c *AWSClient) HeadObject(ctx context.Context, bucket, key string) (*Object
 
 func (c *AWSClient) PutObject(ctx context.Context, bucket, key string, body io.Reader, size int64, checksum string) error {
 	input := &s3.PutObjectInput{
-		Bucket:        aws.String(bucket),
-		Key:           aws.String(key),
-		Body:          body,
-		ContentLength: aws.Int64(size),
-	}
-
-	if checksum != "" {
-		checksumBytes, err := hex.DecodeString(checksum)
-		if err == nil {
-			input.ChecksumSHA256 = aws.String(base64.StdEncoding.EncodeToString(checksumBytes))
-			input.ChecksumAlgorithm = types.ChecksumAlgorithmSha256
-		}
+		Bucket:            aws.String(bucket),
+		Key:               aws.String(key),
+		Body:              body,
+		ContentLength:     aws.Int64(size),
+		ChecksumAlgorithm: types.ChecksumAlgorithmCrc64nvme,
 	}
 
 	_, err := c.client.PutObject(ctx, input)
