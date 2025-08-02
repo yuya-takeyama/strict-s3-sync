@@ -106,9 +106,6 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(items) == 0 {
-		if !quiet {
-			log.Println("No changes needed")
-		}
 		return nil
 	}
 
