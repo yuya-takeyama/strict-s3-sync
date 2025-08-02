@@ -77,7 +77,6 @@ strict-s3-sync ./local-folder s3://my-bucket/prefix/ --delete --dryrun
 
 - For uploads, S3's native ChecksumCRC64NVME is used
 - Files without checksums are re-uploaded by default (natural backfill)
-- Multipart uploads maintain full object checksums (avoiding composite checksum issues)
 - Hardware-accelerated for better performance
 
 ## Required AWS Permissions
@@ -107,7 +106,7 @@ strict-s3-sync ./local-folder s3://my-bucket/prefix/ --delete --dryrun
 
 - Adjust `--concurrency` based on your network and S3 rate limits
 - Use `--exclude` patterns to skip unnecessary files
-- For large files (>64MB), automatic multipart upload is used
+- Note: Maximum file size is 5GB (AWS PutObject limit)
 
 ## License
 
