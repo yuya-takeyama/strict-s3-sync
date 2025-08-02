@@ -2,7 +2,6 @@ package s3client
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"strings"
 
@@ -71,10 +70,7 @@ func (c *AWSClient) HeadObject(ctx context.Context, req *HeadObjectRequest) (*Ob
 	}
 
 	if resp.ChecksumCRC64NVME != nil {
-		decoded, err := base64.StdEncoding.DecodeString(*resp.ChecksumCRC64NVME)
-		if err == nil {
-			info.Checksum = fmt.Sprintf("%x", decoded)
-		}
+		info.Checksum = *resp.ChecksumCRC64NVME
 	}
 
 	return info, nil

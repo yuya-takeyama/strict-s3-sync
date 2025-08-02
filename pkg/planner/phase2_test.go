@@ -44,7 +44,7 @@ func TestPhase2CollectChecksums(t *testing.T) {
 			want: []ChecksumData{
 				{
 					ItemRef:        ItemRef{Path: "hello.txt", Size: 13},
-					SourceChecksum: "4a85d76f1ebb2a91",
+					SourceChecksum: "SoXXbx67KpE=",
 					DestChecksum:   "abcdef123456",
 				},
 			},
@@ -80,12 +80,12 @@ func TestPhase2CollectChecksums(t *testing.T) {
 			want: []ChecksumData{
 				{
 					ItemRef:        ItemRef{Path: "hello.txt", Size: 13},
-					SourceChecksum: "4a85d76f1ebb2a91",
+					SourceChecksum: "SoXXbx67KpE=",
 					DestChecksum:   "remote-hello-checksum",
 				},
 				{
 					ItemRef:        ItemRef{Path: "empty.txt", Size: 0},
-					SourceChecksum: "0000000000000000",
+					SourceChecksum: "AAAAAAAAAAA=",
 					DestChecksum:   "remote-empty-checksum",
 				},
 			},
@@ -159,7 +159,7 @@ func TestPhase2CollectChecksums(t *testing.T) {
 			want: []ChecksumData{
 				{
 					ItemRef:        ItemRef{Path: "hello.txt", Size: 13},
-					SourceChecksum: "4a85d76f1ebb2a91",
+					SourceChecksum: "SoXXbx67KpE=",
 					DestChecksum:   "nested-checksum",
 				},
 			},

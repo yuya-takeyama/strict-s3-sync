@@ -2,7 +2,7 @@ package planner
 
 import (
 	"context"
-	"encoding/hex"
+	"encoding/base64"
 	"fmt"
 	"hash/crc64"
 	"io"
@@ -218,5 +218,5 @@ func calculateFileChecksum(path string) (string, error) {
 		return "", err
 	}
 
-	return hex.EncodeToString(hash.Sum(nil)), nil
+	return base64.StdEncoding.EncodeToString(hash.Sum(nil)), nil
 }
