@@ -108,9 +108,9 @@ func run(cmd *cobra.Command, args []string) error {
 		for _, item := range items {
 			switch item.Action {
 			case planner.ActionUpload:
-				syncLogger.Upload(item.LocalPath, fmt.Sprintf("s3://%s/%s", bucket, item.S3Key))
+				syncLogger.Upload(item.LocalPath, fmt.Sprintf("s3://%s/%s", bucket, strings.TrimPrefix(item.S3Key, bucket+"/")))
 			case planner.ActionDelete:
-				syncLogger.Delete(fmt.Sprintf("s3://%s/%s", bucket, item.S3Key))
+				syncLogger.Delete(fmt.Sprintf("s3://%s/%s", bucket, strings.TrimPrefix(item.S3Key, bucket+"/")))
 			}
 		}
 		return nil

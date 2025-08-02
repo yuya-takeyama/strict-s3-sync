@@ -51,9 +51,11 @@ func (e *Executor) Execute(ctx context.Context, items []planner.Item) []Result {
 			// Log the start of the operation
 			switch itm.Action {
 			case planner.ActionUpload:
-				e.logger.Upload(itm.LocalPath, fmt.Sprintf("s3://%s", itm.S3Key))
+				bucket, key, _ := parseS3Key(itm.S3Key)
+				e.logger.Upload(itm.LocalPath, fmt.Sprintf("s3://%s/%s", bucket, key))
 			case planner.ActionDelete:
-				e.logger.Delete(fmt.Sprintf("s3://%s", itm.S3Key))
+				bucket, key, _ := parseS3Key(itm.S3Key)
+				e.logger.Delete(fmt.Sprintf("s3://%s/%s", bucket, key))
 			}
 
 			err := e.executeItem(ctx, itm)
