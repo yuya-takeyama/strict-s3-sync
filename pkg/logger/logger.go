@@ -11,7 +11,7 @@ type Logger interface {
 	Upload(localPath, s3Path string)
 	Delete(s3Path string)
 	Error(operation, path string, err error)
-	
+
 	// Internal debug logs (no-op by default)
 	Debug(message string)
 }
@@ -26,7 +26,7 @@ func (l *SyncLogger) Upload(localPath, s3Path string) {
 	if l.IsQuiet {
 		return
 	}
-	
+
 	if l.IsDryRun {
 		fmt.Printf("(dryrun) upload: %s to %s\n", localPath, s3Path)
 	} else {
@@ -38,7 +38,7 @@ func (l *SyncLogger) Delete(s3Path string) {
 	if l.IsQuiet {
 		return
 	}
-	
+
 	if l.IsDryRun {
 		fmt.Printf("(dryrun) delete: %s\n", s3Path)
 	} else {

@@ -170,7 +170,6 @@ func (p *FSToS3Planner) Phase2CollectChecksums(ctx context.Context, items []Item
 	return checksums, nil
 }
 
-
 func parseS3URI(uri string) (bucket, prefix string, err error) {
 	if !strings.HasPrefix(uri, "s3://") {
 		return "", "", fmt.Errorf("URI must start with s3://")

@@ -12,7 +12,6 @@ import (
 	"github.com/yuya-takeyama/strict-s3-sync/pkg/s3client"
 )
 
-
 type Executor struct {
 	client      s3client.Client
 	logger      logger.Logger
@@ -58,7 +57,7 @@ func (e *Executor) Execute(ctx context.Context, items []planner.Item) []Result {
 			}
 
 			err := e.executeItem(ctx, itm)
-			
+
 			// Log errors
 			if err != nil {
 				var operation string
