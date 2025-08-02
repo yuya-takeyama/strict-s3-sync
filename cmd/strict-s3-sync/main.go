@@ -54,11 +54,6 @@ func run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("second argument must be an S3 URI (s3://bucket/prefix)")
 	}
 
-	// Parse S3 URI to extract bucket name
-	s3Path := strings.TrimPrefix(s3URI, "s3://")
-	parts := strings.SplitN(s3Path, "/", 2)
-	bucket := parts[0]
-
 	ctx := context.Background()
 
 	cfg, err := config.LoadDefaultConfig(ctx)
@@ -108,9 +103,9 @@ func run(cmd *cobra.Command, args []string) error {
 		for _, item := range items {
 			switch item.Action {
 			case planner.ActionUpload:
-				syncLogger.Upload(item.LocalPath, fmt.Sprintf("s3://%s/%s", bucket, strings.TrimPrefix(item.S3Key, bucket+"/")))
+				syncLogger.Upload(item.LocalPath, fmt.Sprintf("s3://%s/%s", item.Bucket, item.Key))
 			case planner.ActionDelete:
-				syncLogger.Delete(fmt.Sprintf("s3://%s/%s", bucket, strings.TrimPrefix(item.S3Key, bucket+"/")))
+				syncLogger.Delete(fmt.Sprintf("s3://%s/%s", item.Bucket, item.Key))
 			}
 		}
 		return nil
@@ -123,7 +118,7 @@ func run(cmd *cobra.Command, args []string) error {
 	for _, result := range results {
 		if result.Error != nil {
 			failed++
-			log.Printf("Error: %s: %v", result.Item.S3Key, result.Error)
+			log.Printf("Error: %s/%s: %v", result.Item.Bucket, result.Item.Key, result.Error)
 		}
 	}
 

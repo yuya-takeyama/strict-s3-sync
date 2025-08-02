@@ -61,14 +61,15 @@ func Phase1Compare(source []ItemMetadata, dest []ItemMetadata, deleteEnabled boo
 	return result
 }
 
-func Phase3GeneratePlan(phase1 Phase1Result, checksums []ChecksumData, localBase string, s3Prefix string) []Item {
+func Phase3GeneratePlan(phase1 Phase1Result, checksums []ChecksumData, localBase string, bucket string, prefix string) []Item {
 	items := []Item{}
 
 	for _, ref := range phase1.NewItems {
 		items = append(items, Item{
 			Action:    ActionUpload,
 			LocalPath: filepath.Join(localBase, ref.Path),
-			S3Key:     path.Join(s3Prefix, ref.Path),
+			Bucket:    bucket,
+			Key:       path.Join(prefix, ref.Path),
 			Size:      ref.Size,
 			Reason:    "new file",
 		})
@@ -78,7 +79,8 @@ func Phase3GeneratePlan(phase1 Phase1Result, checksums []ChecksumData, localBase
 		items = append(items, Item{
 			Action:    ActionUpload,
 			LocalPath: filepath.Join(localBase, ref.Path),
-			S3Key:     path.Join(s3Prefix, ref.Path),
+			Bucket:    bucket,
+			Key:       path.Join(prefix, ref.Path),
 			Size:      ref.Size,
 			Reason:    "size differs",
 		})
@@ -95,7 +97,8 @@ func Phase3GeneratePlan(phase1 Phase1Result, checksums []ChecksumData, localBase
 				items = append(items, Item{
 					Action:    ActionUpload,
 					LocalPath: filepath.Join(localBase, ref.Path),
-					S3Key:     path.Join(s3Prefix, ref.Path),
+					Bucket:    bucket,
+					Key:       path.Join(prefix, ref.Path),
 					Size:      ref.Size,
 					Reason:    "checksum differs",
 				})
@@ -107,7 +110,8 @@ func Phase3GeneratePlan(phase1 Phase1Result, checksums []ChecksumData, localBase
 		items = append(items, Item{
 			Action:    ActionDelete,
 			LocalPath: "",
-			S3Key:     path.Join(s3Prefix, ref.Path),
+			Bucket:    bucket,
+			Key:       path.Join(prefix, ref.Path),
 			Size:      ref.Size,
 			Reason:    "deleted locally",
 		})
@@ -117,7 +121,7 @@ func Phase3GeneratePlan(phase1 Phase1Result, checksums []ChecksumData, localBase
 		if items[i].Action != items[j].Action {
 			return items[i].Action < items[j].Action
 		}
-		return items[i].S3Key < items[j].S3Key
+		return items[i].Key < items[j].Key
 	})
 
 	return items

@@ -168,7 +168,8 @@ func TestPhase3GeneratePlan(t *testing.T) {
 		phase1    Phase1Result
 		checksums []ChecksumData
 		localBase string
-		s3Prefix  string
+		bucket    string
+		prefix    string
 		want      []Item
 	}{
 		{
@@ -181,19 +182,22 @@ func TestPhase3GeneratePlan(t *testing.T) {
 			},
 			checksums: []ChecksumData{},
 			localBase: "/local",
-			s3Prefix:  "prefix",
+			bucket:    "test-bucket",
+			prefix:    "prefix",
 			want: []Item{
 				{
 					Action:    ActionUpload,
 					LocalPath: "/local/file1.txt",
-					S3Key:     "prefix/file1.txt",
+					Bucket:    "test-bucket",
+					Key:       "prefix/file1.txt",
 					Size:      100,
 					Reason:    "new file",
 				},
 				{
 					Action:    ActionUpload,
 					LocalPath: "/local/file2.txt",
-					S3Key:     "prefix/file2.txt",
+					Bucket:    "test-bucket",
+					Key:       "prefix/file2.txt",
 					Size:      200,
 					Reason:    "new file",
 				},
@@ -208,12 +212,14 @@ func TestPhase3GeneratePlan(t *testing.T) {
 			},
 			checksums: []ChecksumData{},
 			localBase: "/local",
-			s3Prefix:  "prefix",
+			bucket:    "test-bucket",
+			prefix:    "prefix",
 			want: []Item{
 				{
 					Action:    ActionUpload,
 					LocalPath: "/local/file1.txt",
-					S3Key:     "prefix/file1.txt",
+					Bucket:    "test-bucket",
+					Key:       "prefix/file1.txt",
 					Size:      100,
 					Reason:    "size differs",
 				},
@@ -234,12 +240,14 @@ func TestPhase3GeneratePlan(t *testing.T) {
 				},
 			},
 			localBase: "/local",
-			s3Prefix:  "prefix",
+			bucket:    "test-bucket",
+			prefix:    "prefix",
 			want: []Item{
 				{
 					Action:    ActionUpload,
 					LocalPath: "/local/file1.txt",
-					S3Key:     "prefix/file1.txt",
+					Bucket:    "test-bucket",
+					Key:       "prefix/file1.txt",
 					Size:      100,
 					Reason:    "checksum differs",
 				},
@@ -260,7 +268,8 @@ func TestPhase3GeneratePlan(t *testing.T) {
 				},
 			},
 			localBase: "/local",
-			s3Prefix:  "prefix",
+			bucket:    "test-bucket",
+			prefix:    "prefix",
 			want:      []Item{},
 		},
 		{
@@ -272,12 +281,14 @@ func TestPhase3GeneratePlan(t *testing.T) {
 			},
 			checksums: []ChecksumData{},
 			localBase: "/local",
-			s3Prefix:  "prefix",
+			bucket:    "test-bucket",
+			prefix:    "prefix",
 			want: []Item{
 				{
 					Action:    ActionDelete,
 					LocalPath: "",
-					S3Key:     "prefix/file1.txt",
+					Bucket:    "test-bucket",
+					Key:       "prefix/file1.txt",
 					Size:      100,
 					Reason:    "deleted locally",
 				},
@@ -296,26 +307,30 @@ func TestPhase3GeneratePlan(t *testing.T) {
 			},
 			checksums: []ChecksumData{},
 			localBase: "/local",
-			s3Prefix:  "",
+			bucket:    "test-bucket",
+			prefix:    "",
 			want: []Item{
 				{
 					Action:    ActionDelete,
 					LocalPath: "",
-					S3Key:     "z.txt",
+					Bucket:    "test-bucket",
+					Key:       "z.txt",
 					Size:      300,
 					Reason:    "deleted locally",
 				},
 				{
 					Action:    ActionUpload,
 					LocalPath: "/local/a.txt",
-					S3Key:     "a.txt",
+					Bucket:    "test-bucket",
+					Key:       "a.txt",
 					Size:      200,
 					Reason:    "new file",
 				},
 				{
 					Action:    ActionUpload,
 					LocalPath: "/local/b.txt",
-					S3Key:     "b.txt",
+					Bucket:    "test-bucket",
+					Key:       "b.txt",
 					Size:      100,
 					Reason:    "new file",
 				},
@@ -325,7 +340,7 @@ func TestPhase3GeneratePlan(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := Phase3GeneratePlan(tt.phase1, tt.checksums, tt.localBase, tt.s3Prefix)
+			got := Phase3GeneratePlan(tt.phase1, tt.checksums, tt.localBase, tt.bucket, tt.prefix)
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Phase3GeneratePlan() = %+v, want %+v", got, tt.want)
 			}

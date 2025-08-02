@@ -82,13 +82,7 @@ func (p *FSToS3Planner) Plan(ctx context.Context, source Source, dest Destinatio
 		return nil, fmt.Errorf("failed to collect checksums: %w", err)
 	}
 
-	// For item generation, prepend bucket name to ensure S3Key contains bucket/key format
-	// which is expected by executor.parseS3Key
-	s3Prefix := bucket
-	if prefix != "" {
-		s3Prefix = bucket + "/" + prefix
-	}
-	items := Phase3GeneratePlan(phase1Result, checksums, source.Path, s3Prefix)
+	items := Phase3GeneratePlan(phase1Result, checksums, source.Path, bucket, prefix)
 
 	// Calculate checksums for upload items
 	for i, item := range items {

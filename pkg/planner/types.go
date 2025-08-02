@@ -58,7 +58,8 @@ const (
 type Item struct {
 	Action    Action
 	LocalPath string
-	S3Key     string
+	Bucket    string
+	Key       string
 	Size      int64
 	Reason    string
 	Checksum  string

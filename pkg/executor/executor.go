@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"strings"
 	"sync"
 
 	"github.com/yuya-takeyama/strict-s3-sync/pkg/logger"
@@ -51,11 +50,9 @@ func (e *Executor) Execute(ctx context.Context, items []planner.Item) []Result {
 			// Log the start of the operation
 			switch itm.Action {
 			case planner.ActionUpload:
-				bucket, key, _ := parseS3Key(itm.S3Key)
-				e.logger.Upload(itm.LocalPath, fmt.Sprintf("s3://%s/%s", bucket, key))
+				e.logger.Upload(itm.LocalPath, fmt.Sprintf("s3://%s/%s", itm.Bucket, itm.Key))
 			case planner.ActionDelete:
-				bucket, key, _ := parseS3Key(itm.S3Key)
-				e.logger.Delete(fmt.Sprintf("s3://%s/%s", bucket, key))
+				e.logger.Delete(fmt.Sprintf("s3://%s/%s", itm.Bucket, itm.Key))
 			}
 
 			err := e.executeItem(ctx, itm)
@@ -69,7 +66,7 @@ func (e *Executor) Execute(ctx context.Context, items []planner.Item) []Result {
 				case planner.ActionDelete:
 					operation = "delete"
 				}
-				e.logger.Error(operation, itm.S3Key, err)
+				e.logger.Error(operation, fmt.Sprintf("%s/%s", itm.Bucket, itm.Key), err)
 			}
 
 			results[idx] = Result{
@@ -101,15 +98,10 @@ func (e *Executor) uploadFile(ctx context.Context, item planner.Item) error {
 	}
 	defer file.Close()
 
-	bucket, key, err := parseS3Key(item.S3Key)
-	if err != nil {
-		return err
-	}
-
 	contentType := guessContentType(item.LocalPath)
 	err = e.client.PutObject(ctx, &s3client.PutObjectRequest{
-		Bucket:      bucket,
-		Key:         key,
+		Bucket:      item.Bucket,
+		Key:         item.Key,
 		Body:        file,
 		Size:        item.Size,
 		Checksum:    item.Checksum,
@@ -123,26 +115,13 @@ func (e *Executor) uploadFile(ctx context.Context, item planner.Item) error {
 }
 
 func (e *Executor) deleteObject(ctx context.Context, item planner.Item) error {
-	bucket, key, err := parseS3Key(item.S3Key)
-	if err != nil {
-		return err
-	}
-
-	err = e.client.DeleteObject(ctx, &s3client.DeleteObjectRequest{
-		Bucket: bucket,
-		Key:    key,
+	err := e.client.DeleteObject(ctx, &s3client.DeleteObjectRequest{
+		Bucket: item.Bucket,
+		Key:    item.Key,
 	})
 	if err != nil {
 		return fmt.Errorf("failed to delete: %w", err)
 	}
 
 	return nil
-}
-
-func parseS3Key(s3Key string) (bucket, key string, err error) {
-	parts := strings.SplitN(s3Key, "/", 2)
-	if len(parts) < 2 {
-		return "", "", fmt.Errorf("invalid S3 key format: %s", s3Key)
-	}
-	return parts[0], parts[1], nil
 }
