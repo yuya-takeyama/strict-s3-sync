@@ -92,7 +92,6 @@ func run(cmd *cobra.Command, args []string) error {
 		Logger:        syncLogger,
 	}
 
-	log.Println("Generating sync plan...")
 	items, err := plnr.Plan(ctx, source, dest, opts)
 	if err != nil {
 		return fmt.Errorf("failed to generate plan: %w", err)
