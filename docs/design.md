@@ -37,7 +37,7 @@ type DestType string
 const (
     SourceTypeFileSystem SourceType = "filesystem"
     SourceTypeS3        SourceType = "s3"
-    
+
     DestTypeFileSystem  DestType = "filesystem"
     DestTypeS3         DestType = "s3"
 )
@@ -45,7 +45,7 @@ const (
 // Metadata for a file or object
 type ItemMetadata struct {
     Path      string    // Relative path/key
-    Size      int64     
+    Size      int64
     ModTime   time.Time // Optional, depending on source
     Checksum  string    // May be empty initially
 }
@@ -82,7 +82,7 @@ const (
 
 // Plan item represents a single action to be taken
 type Item struct {
-    Action    Action  
+    Action    Action
     LocalPath string  // Full path for uploads (filesystem source)
     S3Key     string  // S3 object key
     Size      int64   // File size in bytes
@@ -98,10 +98,10 @@ The planner accepts an injectable logger for monitoring progress:
 type PlanLogger interface {
     // Called at the start of each phase
     PhaseStart(phase string, totalItems int)
-    
+
     // Called for each item processed
     ItemProcessed(phase string, item string, action string)
-    
+
     // Called at the end of each phase
     PhaseComplete(phase string, processedItems int)
 }
@@ -273,7 +273,7 @@ s3Objects := s3client.ListObjects(bucket, prefix)
 phase1Result := Phase1Compare(localFiles, s3Objects, deleteEnabled)
 
 // Phase 2: I/O for checksums
-checksums := Phase2CollectChecksums(ctx, phase1Result.NeedChecksum, 
+checksums := Phase2CollectChecksums(ctx, phase1Result.NeedChecksum,
     SourceType_FileSystem,  // Will calculate CRC64NVME from files
     DestType_S3)           // Will use HeadObject to get checksums
 
@@ -311,6 +311,7 @@ checksums := Phase2CollectChecksums(ctx, phase1Result.NeedChecksum,
 ### 1. Testability
 
 Each phase can be tested independently:
+
 - Phase 1: Test with various metadata combinations
 - Phase 2: Mock I/O operations
 - Phase 3: Test with different phase1/phase2 outputs
@@ -324,6 +325,7 @@ Each phase can be tested independently:
 ### 3. Extensibility
 
 New sync scenarios can be added by:
+
 1. Implementing the metadata collection for the new source/destination
 2. Implementing checksum collection for the new type
 3. Reusing the same phase functions
@@ -340,6 +342,196 @@ New sync scenarios can be added by:
 - Checksums can be cached with file modification time
 - Plans can be saved and re-executed
 
+## Multipart Upload Implementation
+
+### Overview
+
+For files larger than 8MB (AWS CLI default threshold), multipart upload provides significant benefits:
+
+- **Improved throughput**: Parallel part uploads
+- **Better reliability**: Failed parts can be retried individually
+- **Required for large files**: Files over 5GB must use multipart upload
+- **AWS CLI compatibility**: Uses the same 8MB threshold as aws s3 sync
+
+### Design Approach
+
+The multipart upload functionality will be implemented transparently within the `AWSClient` implementation of the `s3client.Client` interface. This approach:
+
+- Maintains backward compatibility
+- Requires no changes to existing interfaces
+- Automatically optimizes uploads based on file size
+
+### Implementation Details
+
+#### Thresholds
+
+```go
+const (
+    // Multipart upload thresholds (AWS CLI compatible)
+    MultipartThreshold     = 8 * 1024 * 1024  // 8MB - AWS CLI default threshold
+    MultipartMandatory     = 5 * 1024 * 1024 * 1024  // 5GB - AWS limit
+
+    // Default part size and concurrency
+    DefaultPartSize        = 16 * 1024 * 1024  // 16MB (AWS CLI default is 8MB, but 16MB provides better performance)
+    DefaultUploadConcurrency = 10  // AWS CLI boto3 default
+
+    // S3 limits
+    MinPartSize            = 5 * 1024 * 1024  // 5MB - S3 minimum part size
+    MaxPartSize            = 5 * 1024 * 1024 * 1024  // 5GB - S3 maximum part size
+    MaxParts               = 10000  // S3 maximum number of parts
+)
+```
+
+#### Modified PutObject Implementation
+
+The `AWSClient.PutObject` method will automatically switch between simple and multipart upload:
+
+```go
+func (c *AWSClient) PutObject(ctx context.Context, req *PutObjectRequest) error {
+    // Use multipart for files >= 8MB (AWS CLI default)
+    if req.Size >= MultipartThreshold {
+        return c.putObjectMultipart(ctx, req)
+    }
+
+    // Use simple PutObject for smaller files
+    return c.putObjectSimple(ctx, req)
+}
+```
+
+#### Multipart Upload Implementation
+
+```go
+func (c *AWSClient) putObjectMultipart(ctx context.Context, req *PutObjectRequest) error {
+    uploader := manager.NewUploader(c.client, func(u *manager.Uploader) {
+        u.PartSize = DefaultPartSize
+        u.Concurrency = DefaultUploadConcurrency
+        // Ensure CRC64NVME checksum is calculated for the entire object
+        u.ClientOptions = append(u.ClientOptions, func(o *s3.Options) {
+            o.ChecksumAlgorithm = types.ChecksumAlgorithmCrc64nvme
+        })
+    })
+
+    _, err := uploader.Upload(ctx, &s3.PutObjectInput{
+        Bucket:            aws.String(req.Bucket),
+        Key:               aws.String(req.Key),
+        Body:              req.Body,
+        ChecksumAlgorithm: types.ChecksumAlgorithmCrc64nvme,
+        ContentType:       aws.String(req.ContentType),
+    })
+
+    return err
+}
+```
+
+### Interface Considerations
+
+The current `PutObjectRequest` structure is already suitable for multipart upload:
+
+```go
+type PutObjectRequest struct {
+    Bucket      string
+    Key         string
+    Body        io.Reader  // os.File implements io.ReadSeeker required by Uploader
+    Size        int64      // Used to determine upload method
+    Checksum    string     // Not used during upload (S3 calculates it)
+    ContentType string
+}
+```
+
+No interface changes are required because:
+
+- `os.File` (passed from executor) implements `io.ReadSeeker` required by the Uploader
+- Size information is already available for threshold decisions
+- CRC64NVME checksum is automatically calculated by S3
+
+### Memory Management
+
+Memory usage for multipart uploads:
+
+- Buffer size = `PartSize × Concurrency`
+- Default: 16MB × 10 = 160MB
+- Can be tuned based on available memory and network conditions
+
+### Error Handling
+
+The AWS SDK v2 manager handles:
+
+- Automatic retries with exponential backoff
+- Part-level retry on failure
+- Cleanup of incomplete multipart uploads on error
+
+Additional considerations:
+
+- Failed uploads leave no orphaned parts (SDK handles cleanup)
+- Network interruptions are handled gracefully with part-level retries
+
+### Performance Optimization
+
+#### Dynamic Part Size
+
+For very large files, the part size should be adjusted to stay within the 10,000 part limit:
+
+```go
+func calculatePartSize(fileSize int64) int64 {
+    // Calculate minimum part size to stay within 10,000 part limit
+    minPartSize := fileSize / MaxParts
+
+    // Round up to nearest MB
+    partSize := ((minPartSize / (1024 * 1024)) + 1) * 1024 * 1024
+
+    // Ensure minimum 5MB (S3 requirement)
+    if partSize < MinPartSize {
+        partSize = MinPartSize
+    }
+
+    // Cap at 5GB (S3 maximum)
+    if partSize > MaxPartSize {
+        partSize = MaxPartSize
+    }
+
+    return partSize
+}
+```
+
+### Configuration
+
+Configuration via environment variables (AWS CLI does not support multipart configuration via CLI flags):
+
+```bash
+# Environment variables
+STRICT_S3_SYNC_MULTIPART_THRESHOLD=8388608   # 8MB in bytes (AWS CLI default)
+STRICT_S3_SYNC_PART_SIZE=16777216            # 16MB in bytes
+STRICT_S3_SYNC_UPLOAD_CONCURRENCY=10         # AWS CLI boto3 default
+```
+
+Note: AWS S3 CLI does not expose multipart upload parameters as command-line flags. These settings are only configurable through AWS CLI configuration files or environment variables in the official AWS CLI.
+
+### Testing Strategy
+
+1. **Unit Tests**:
+   - Mock the S3 client to verify threshold behavior
+   - Test part size calculation for various file sizes
+   - Verify checksum handling
+
+2. **Integration Tests**:
+   - Upload files of various sizes (50MB, 100MB, 200MB, 5GB+)
+   - Verify CRC64NVME checksums match
+   - Test network failure scenarios
+
+3. **Performance Tests**:
+   - Compare upload times for files with/without multipart
+   - Measure memory usage under different configurations
+
+### Dependencies
+
+Add to go.mod:
+
+```go
+require (
+    github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.x.x
+)
+```
+
 ## Future Considerations
 
 ### Additional Planner Implementations
@@ -347,33 +539,39 @@ New sync scenarios can be added by:
 When needed, the following planners can be implemented using the same interface:
 
 #### S3ToS3Planner
+
 - For bucket-to-bucket synchronization
 - Leverages server-side copy operations
 - No local I/O required
 
-#### S3ToFSPlanner  
+#### S3ToFSPlanner
+
 - For downloading from S3 to local file system
 - Inverse of current FSToS3Planner
 
 ### Logger Implementations
 
 #### ProgressLogger
+
 - Shows only percentage progress per phase
 - Useful for large-scale operations
 - Minimal output while maintaining visibility
 
 #### JSONLogger
+
 - Structured logging for machine processing
 - Integration with monitoring systems
 
 ### Advanced Features
 
 #### Incremental Sync
+
 - Wrapper around base planners
 - State persistence between runs
 - Only process changed items
 
 #### Parallel Planning
+
 - Split large directories into chunks
 - Generate plans concurrently
 - Merge results for execution
@@ -392,22 +590,22 @@ strict-s3-sync <LocalPath> <S3Uri> [options]
 
 These options are implemented first to match essential `aws s3 sync` functionality:
 
-| Option | Description | AWS Compatibility |
-|--------|-------------|-------------------|
-| `--dryrun` | Shows operations without executing | Same as `aws s3 sync` |
-| `--delete` | Delete dest files not in source | Same as `aws s3 sync` |
-| `--exclude <pattern>` | Exclude patterns (multiple allowed) | Same as `aws s3 sync` |
-| `--include <pattern>` | Include patterns (multiple allowed) | Same as `aws s3 sync` |
-| `--quiet` | Suppress non-error output | Similar to `aws s3 sync` |
+| Option                | Description                         | AWS Compatibility        |
+| --------------------- | ----------------------------------- | ------------------------ |
+| `--dryrun`            | Shows operations without executing  | Same as `aws s3 sync`    |
+| `--delete`            | Delete dest files not in source     | Same as `aws s3 sync`    |
+| `--exclude <pattern>` | Exclude patterns (multiple allowed) | Same as `aws s3 sync`    |
+| `--include <pattern>` | Include patterns (multiple allowed) | Same as `aws s3 sync`    |
+| `--quiet`             | Suppress non-error output           | Similar to `aws s3 sync` |
 
 ### Additional Options
 
 Options specific to strict-s3-sync:
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--concurrency <n>` | Number of concurrent operations | 32 |
-| `--skip-missing-checksum` | Skip files without S3 checksums | false |
+| Option                    | Description                     | Default |
+| ------------------------- | ------------------------------- | ------- |
+| `--concurrency <n>`       | Number of concurrent operations | 32      |
+| `--skip-missing-checksum` | Skip files without S3 checksums | false   |
 
 ### Option Naming Philosophy
 
@@ -490,11 +688,11 @@ func TestFSToS3Planner_Plan(t *testing.T) {
             {Path: "file2.txt", Size: 200},
         },
     }
-    
+
     // Test with NullLogger
     planner := NewFSToS3Planner(mockS3Client, &NullLogger{})
     items, err := planner.Plan(ctx, source, dest, opts)
-    
+
     // Verify plan correctness
     assert.NoError(t, err)
     assert.Len(t, items, 2)
