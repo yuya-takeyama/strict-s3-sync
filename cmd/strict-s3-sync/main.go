@@ -126,9 +126,5 @@ func run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("%d operations failed", failed)
 	}
 
-	if !quiet {
-		log.Printf("Successfully completed %d operations", len(results))
-	}
-
 	return nil
 }
