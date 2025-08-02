@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/spf13/cobra"
 	"github.com/yuya-takeyama/strict-s3-sync/pkg/executor"
@@ -22,6 +23,7 @@ var (
 	includes    []string
 	quiet       bool
 	concurrency int
+	profile     string
 )
 
 func main() {
@@ -40,6 +42,7 @@ for accurate file comparison, ensuring data integrity.`,
 	rootCmd.Flags().StringSliceVar(&includes, "include", nil, "Include patterns (multiple allowed)")
 	rootCmd.Flags().BoolVar(&quiet, "quiet", false, "Suppress non-error output")
 	rootCmd.Flags().IntVar(&concurrency, "concurrency", 32, "Number of concurrent operations")
+	rootCmd.Flags().StringVar(&profile, "profile", "", "AWS profile to use")
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
@@ -56,7 +59,13 @@ func run(cmd *cobra.Command, args []string) error {
 
 	ctx := context.Background()
 
-	cfg, err := config.LoadDefaultConfig(ctx)
+	var cfg aws.Config
+	var err error
+	if profile != "" {
+		cfg, err = config.LoadDefaultConfig(ctx, config.WithSharedConfigProfile(profile))
+	} else {
+		cfg, err = config.LoadDefaultConfig(ctx)
+	}
 	if err != nil {
 		return fmt.Errorf("failed to load AWS config: %w", err)
 	}
