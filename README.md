@@ -37,6 +37,7 @@ strict-s3-sync <LocalPath> <S3Uri> [options]
 - `--delete`: Delete files in destination that don't exist in source
 - `--dryrun`: Show what would be done without actually doing it
 - `--concurrency <n>`: Number of concurrent operations (default: 32)
+- `--profile <profile>`: AWS profile to use
 - `--region <region>`: AWS region (uses default if not specified)
 - `--quiet`: Suppress output
 
