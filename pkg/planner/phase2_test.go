@@ -186,8 +186,6 @@ func TestPhase2CollectChecksums(t *testing.T) {
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Phase2CollectChecksums() = %+v, want %+v", got, tt.want)
 			}
-
-			// Logging verification is no longer needed as Phase logs have been removed
 		})
 	}
 }
