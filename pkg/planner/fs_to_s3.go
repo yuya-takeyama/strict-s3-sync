@@ -15,7 +15,7 @@ import (
 )
 
 // CRC64NVME polynomial as per AWS S3 specification
-var crc64NVMETable = crc64.MakeTable(0xAD93D23594C93659)
+var crc64NVMETable = crc64.MakeTable(0x9a6c9329ac4bc9b5)
 
 type FSToS3Planner struct {
 	client s3client.Client
