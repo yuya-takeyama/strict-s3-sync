@@ -138,29 +138,84 @@ func (p *FSToS3Planner) gatherLocalFiles(basePath string, excludes []string) ([]
 }
 
 func (p *FSToS3Planner) Phase2CollectChecksums(ctx context.Context, items []ItemRef, localBase string, bucket string, prefix string) ([]ChecksumData, error) {
+	if len(items) == 0 {
+		return nil, nil
+	}
 
-	var checksums []ChecksumData
-	for _, item := range items {
-		localPath := filepath.Join(localBase, item.Path)
-		sourceChecksum, err := calculateFileChecksum(localPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to calculate checksum for %s: %w", localPath, err)
+	// ワーカー数は並列度設定かCPU数の2倍
+	workerCount := 32 // TODO: make configurable
+	if len(items) < workerCount {
+		workerCount = len(items)
+	}
+
+	type checksumTask struct {
+		index int
+		item  ItemRef
+	}
+
+	type checksumResult struct {
+		index int
+		data  ChecksumData
+		err   error
+	}
+
+	// チャンネルの作成
+	tasks := make(chan checksumTask, len(items))
+	results := make(chan checksumResult, len(items))
+
+	// ワーカーの起動
+	for i := 0; i < workerCount; i++ {
+		go func() {
+			for task := range tasks {
+				localPath := filepath.Join(localBase, task.item.Path)
+				sourceChecksum, err := calculateFileChecksum(localPath)
+				if err != nil {
+					results <- checksumResult{
+						index: task.index,
+						err:   fmt.Errorf("failed to calculate checksum for %s: %w", localPath, err),
+					}
+					continue
+				}
+
+				s3Key := path.Join(prefix, task.item.Path)
+				objInfo, err := p.client.HeadObject(ctx, &s3client.HeadObjectRequest{
+					Bucket: bucket,
+					Key:    s3Key,
+				})
+				if err != nil {
+					results <- checksumResult{
+						index: task.index,
+						err:   fmt.Errorf("failed to head object %s: %w", s3Key, err),
+					}
+					continue
+				}
+
+				results <- checksumResult{
+					index: task.index,
+					data: ChecksumData{
+						ItemRef:        task.item,
+						SourceChecksum: sourceChecksum,
+						DestChecksum:   objInfo.Checksum,
+					},
+				}
+			}
+		}()
+	}
+
+	// タスクの送信
+	for i, item := range items {
+		tasks <- checksumTask{index: i, item: item}
+	}
+	close(tasks)
+
+	// 結果の収集（順序を保持）
+	checksums := make([]ChecksumData, len(items))
+	for i := 0; i < len(items); i++ {
+		result := <-results
+		if result.err != nil {
+			return nil, result.err
 		}
-
-		s3Key := path.Join(prefix, item.Path)
-		objInfo, err := p.client.HeadObject(ctx, &s3client.HeadObjectRequest{
-			Bucket: bucket,
-			Key:    s3Key,
-		})
-		if err != nil {
-			return nil, fmt.Errorf("failed to head object %s: %w", s3Key, err)
-		}
-
-		checksums = append(checksums, ChecksumData{
-			ItemRef:        item,
-			SourceChecksum: sourceChecksum,
-			DestChecksum:   objInfo.Checksum,
-		})
+		checksums[result.index] = result.data
 	}
 
 	return checksums, nil
