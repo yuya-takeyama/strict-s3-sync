@@ -7,52 +7,19 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/yuya-takeyama/strict-s3-sync/pkg/logger"
 	"github.com/yuya-takeyama/strict-s3-sync/pkg/planner"
 	"github.com/yuya-takeyama/strict-s3-sync/pkg/s3client"
 )
 
-type ExecutionLogger interface {
-	ItemStart(item planner.Item)
-	ItemComplete(item planner.Item, err error)
-}
-
-type VerboseLogger struct{}
-
-func (l *VerboseLogger) ItemStart(item planner.Item) {
-	switch item.Action {
-	case planner.ActionUpload:
-		fmt.Printf("upload: %s to s3://%s\n", item.LocalPath, item.S3Key)
-	case planner.ActionDelete:
-		fmt.Printf("delete: s3://%s\n", item.S3Key)
-	}
-}
-
-func (l *VerboseLogger) ItemComplete(item planner.Item, err error) {
-	if err != nil {
-		fmt.Printf("error: %s: %v\n", item.S3Key, err)
-	}
-}
-
-type QuietLogger struct{}
-
-func (l *QuietLogger) ItemStart(item planner.Item) {}
-
-func (l *QuietLogger) ItemComplete(item planner.Item, err error) {
-	if err != nil {
-		fmt.Printf("error: %s: %v\n", item.S3Key, err)
-	}
-}
 
 type Executor struct {
 	client      s3client.Client
-	logger      ExecutionLogger
+	logger      logger.Logger
 	concurrency int
 }
 
-func NewExecutor(client s3client.Client, logger ExecutionLogger, concurrency int) *Executor {
-	if logger == nil {
-		logger = &QuietLogger{}
-	}
+func NewExecutor(client s3client.Client, logger logger.Logger, concurrency int) *Executor {
 	if concurrency <= 0 {
 		concurrency = 32
 	}
@@ -82,9 +49,27 @@ func (e *Executor) Execute(ctx context.Context, items []planner.Item) []Result {
 			sem <- struct{}{}
 			defer func() { <-sem }()
 
-			e.logger.ItemStart(itm)
+			// Log the start of the operation
+			switch itm.Action {
+			case planner.ActionUpload:
+				e.logger.Upload(itm.LocalPath, fmt.Sprintf("s3://%s", itm.S3Key))
+			case planner.ActionDelete:
+				e.logger.Delete(fmt.Sprintf("s3://%s", itm.S3Key))
+			}
+
 			err := e.executeItem(ctx, itm)
-			e.logger.ItemComplete(itm, err)
+			
+			// Log errors
+			if err != nil {
+				var operation string
+				switch itm.Action {
+				case planner.ActionUpload:
+					operation = "upload"
+				case planner.ActionDelete:
+					operation = "delete"
+				}
+				e.logger.Error(operation, itm.S3Key, err)
+			}
 
 			results[idx] = Result{
 				Item:  itm,

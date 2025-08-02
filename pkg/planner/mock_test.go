@@ -43,37 +43,41 @@ func (m *mockS3Client) DeleteObject(ctx context.Context, req *s3client.DeleteObj
 	return fmt.Errorf("DeleteObject not implemented")
 }
 
-// mockLogger is a mock implementation of PlanLogger for testing
+// mockLogger is a mock implementation of logger.Logger for testing
 type mockLogger struct {
-	phaseStartCalls    []phaseStartCall
-	itemProcessedCalls []itemProcessedCall
-	phaseCompleteCalls []phaseCompleteCall
+	uploadCalls []uploadCall
+	deleteCalls []deleteCall
+	errorCalls  []errorCall
+	debugCalls  []string
 }
 
-type phaseStartCall struct {
-	phase      string
-	totalItems int
+type uploadCall struct {
+	localPath string
+	s3Path    string
 }
 
-type itemProcessedCall struct {
-	phase  string
-	item   string
-	action string
+type deleteCall struct {
+	s3Path string
 }
 
-type phaseCompleteCall struct {
-	phase          string
-	processedItems int
+type errorCall struct {
+	operation string
+	path      string
+	err       error
 }
 
-func (m *mockLogger) PhaseStart(phase string, totalItems int) {
-	m.phaseStartCalls = append(m.phaseStartCalls, phaseStartCall{phase, totalItems})
+func (m *mockLogger) Upload(localPath, s3Path string) {
+	m.uploadCalls = append(m.uploadCalls, uploadCall{localPath, s3Path})
 }
 
-func (m *mockLogger) ItemProcessed(phase string, item string, action string) {
-	m.itemProcessedCalls = append(m.itemProcessedCalls, itemProcessedCall{phase, item, action})
+func (m *mockLogger) Delete(s3Path string) {
+	m.deleteCalls = append(m.deleteCalls, deleteCall{s3Path})
 }
 
-func (m *mockLogger) PhaseComplete(phase string, processedItems int) {
-	m.phaseCompleteCalls = append(m.phaseCompleteCalls, phaseCompleteCall{phase, processedItems})
+func (m *mockLogger) Error(operation, path string, err error) {
+	m.errorCalls = append(m.errorCalls, errorCall{operation, path, err})
+}
+
+func (m *mockLogger) Debug(message string) {
+	m.debugCalls = append(m.debugCalls, message)
 }

@@ -5,36 +5,61 @@ import (
 	"log"
 )
 
-type VerboseLogger struct{}
-
-func (l *VerboseLogger) PhaseStart(phase string, totalItems int) {
-	log.Printf("[%s] Starting phase with %d items", phase, totalItems)
+// Logger is the unified logging interface for strict-s3-sync
+type Logger interface {
+	// User-facing operation logs
+	Upload(localPath, s3Path string)
+	Delete(s3Path string)
+	Error(operation, path string, err error)
+	
+	// Internal debug logs (no-op by default)
+	Debug(message string)
 }
 
-func (l *VerboseLogger) ItemProcessed(phase string, item string, action string) {
-	log.Printf("[%s] %s: %s", phase, action, item)
+// SyncLogger handles logging for both normal execution and dry-run mode
+type SyncLogger struct {
+	IsDryRun bool
+	IsQuiet  bool
 }
 
-func (l *VerboseLogger) PhaseComplete(phase string, processedItems int) {
-	log.Printf("[%s] Phase complete. Processed %d items", phase, processedItems)
-}
-
-type NullLogger struct{}
-
-func (l *NullLogger) PhaseStart(phase string, totalItems int) {}
-
-func (l *NullLogger) ItemProcessed(phase string, item string, action string) {}
-
-func (l *NullLogger) PhaseComplete(phase string, processedItems int) {}
-
-type QuietLogger struct{}
-
-func (l *QuietLogger) PhaseStart(phase string, totalItems int) {}
-
-func (l *QuietLogger) ItemProcessed(phase string, item string, action string) {
-	if action != "skip" {
-		fmt.Printf("%s: %s\n", action, item)
+func (l *SyncLogger) Upload(localPath, s3Path string) {
+	if l.IsQuiet {
+		return
+	}
+	
+	if l.IsDryRun {
+		fmt.Printf("(dryrun) upload: %s to %s\n", localPath, s3Path)
+	} else {
+		fmt.Printf("upload: %s to %s\n", localPath, s3Path)
 	}
 }
 
-func (l *QuietLogger) PhaseComplete(phase string, processedItems int) {}
+func (l *SyncLogger) Delete(s3Path string) {
+	if l.IsQuiet {
+		return
+	}
+	
+	if l.IsDryRun {
+		fmt.Printf("(dryrun) delete: %s\n", s3Path)
+	} else {
+		fmt.Printf("delete: %s\n", s3Path)
+	}
+}
+
+func (l *SyncLogger) Error(operation, path string, err error) {
+	// Always show errors, even in quiet mode
+	fmt.Printf("error: %s %s: %v\n", operation, path, err)
+}
+
+func (l *SyncLogger) Debug(message string) {
+	// No-op by default
+}
+
+// DebugLogger extends SyncLogger with debug output
+type DebugLogger struct {
+	SyncLogger
+}
+
+func (l *DebugLogger) Debug(message string) {
+	log.Printf("[DEBUG] %s", message)
+}

@@ -3,6 +3,8 @@ package planner
 import (
 	"context"
 	"time"
+
+	"github.com/yuya-takeyama/strict-s3-sync/pkg/logger"
 )
 
 type Planner interface {
@@ -42,7 +44,7 @@ type Destination struct {
 type Options struct {
 	DeleteEnabled bool
 	Excludes      []string
-	Logger        PlanLogger
+	Logger        logger.Logger
 }
 
 type Action string
@@ -62,8 +64,3 @@ type Item struct {
 	Checksum  string
 }
 
-type PlanLogger interface {
-	PhaseStart(phase string, totalItems int)
-	ItemProcessed(phase string, item string, action string)
-	PhaseComplete(phase string, processedItems int)
-}

@@ -187,23 +187,7 @@ func TestPhase2CollectChecksums(t *testing.T) {
 				t.Errorf("Phase2CollectChecksums() = %+v, want %+v", got, tt.want)
 			}
 
-			// Verify logging calls
-			if len(mockLog.itemProcessedCalls) != tt.wantLogCalls {
-				t.Errorf("Expected %d ItemProcessed calls, got %d", tt.wantLogCalls, len(mockLog.itemProcessedCalls))
-			}
-
-			// Verify phase start and complete were called correctly
-			if !tt.wantErr && len(tt.items) > 0 {
-				if len(mockLog.phaseStartCalls) != 1 {
-					t.Errorf("Expected 1 PhaseStart call, got %d", len(mockLog.phaseStartCalls))
-				} else if mockLog.phaseStartCalls[0].phase != "Phase2" {
-					t.Errorf("Expected PhaseStart phase = Phase2, got %s", mockLog.phaseStartCalls[0].phase)
-				}
-
-				if len(mockLog.phaseCompleteCalls) != 1 {
-					t.Errorf("Expected 1 PhaseComplete call, got %d", len(mockLog.phaseCompleteCalls))
-				}
-			}
+			// Logging verification is no longer needed as Phase logs have been removed
 		})
 	}
 }

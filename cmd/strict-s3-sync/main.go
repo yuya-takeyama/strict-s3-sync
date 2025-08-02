@@ -54,6 +54,11 @@ func run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("second argument must be an S3 URI (s3://bucket/prefix)")
 	}
 
+	// Parse S3 URI to extract bucket name
+	s3Path := strings.TrimPrefix(s3URI, "s3://")
+	parts := strings.SplitN(s3Path, "/", 2)
+	bucket := parts[0]
+
 	ctx := context.Background()
 
 	cfg, err := config.LoadDefaultConfig(ctx)
@@ -63,14 +68,13 @@ func run(cmd *cobra.Command, args []string) error {
 
 	s3Client := s3client.NewAWSClient(cfg)
 
-	var planLogger planner.PlanLogger
-	if quiet {
-		planLogger = &logger.NullLogger{}
-	} else {
-		planLogger = &logger.VerboseLogger{}
+	// Create unified logger
+	syncLogger := &logger.SyncLogger{
+		IsDryRun: dryRun,
+		IsQuiet:  quiet,
 	}
 
-	plnr := planner.NewFSToS3Planner(s3Client, planLogger)
+	plnr := planner.NewFSToS3Planner(s3Client, syncLogger)
 
 	source := planner.Source{
 		Type: planner.SourceTypeFileSystem,
@@ -85,7 +89,7 @@ func run(cmd *cobra.Command, args []string) error {
 	opts := planner.Options{
 		DeleteEnabled: deleteFlag,
 		Excludes:      excludes,
-		Logger:        planLogger,
+		Logger:        syncLogger,
 	}
 
 	log.Println("Generating sync plan...")
@@ -102,26 +106,18 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 
 	if dryRun {
-		fmt.Println("(dryrun) The following operations would be performed:")
 		for _, item := range items {
 			switch item.Action {
 			case planner.ActionUpload:
-				fmt.Printf("upload: %s to s3://%s (%s)\n", item.LocalPath, item.S3Key, item.Reason)
+				syncLogger.Upload(item.LocalPath, fmt.Sprintf("s3://%s/%s", bucket, item.S3Key))
 			case planner.ActionDelete:
-				fmt.Printf("delete: s3://%s (%s)\n", item.S3Key, item.Reason)
+				syncLogger.Delete(fmt.Sprintf("s3://%s/%s", bucket, item.S3Key))
 			}
 		}
 		return nil
 	}
 
-	var execLogger executor.ExecutionLogger
-	if quiet {
-		execLogger = &executor.QuietLogger{}
-	} else {
-		execLogger = &executor.VerboseLogger{}
-	}
-
-	exec := executor.NewExecutor(s3Client, execLogger, concurrency)
+	exec := executor.NewExecutor(s3Client, syncLogger, concurrency)
 	results := exec.Execute(ctx, items)
 
 	var failed int

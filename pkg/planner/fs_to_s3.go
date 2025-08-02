@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/yuya-takeyama/strict-s3-sync/pkg/logger"
 	"github.com/yuya-takeyama/strict-s3-sync/pkg/s3client"
 )
 
@@ -19,13 +20,10 @@ var crc64NVMETable = crc64.MakeTable(0x9a6c9329ac4bc9b5)
 
 type FSToS3Planner struct {
 	client s3client.Client
-	logger PlanLogger
+	logger logger.Logger
 }
 
-func NewFSToS3Planner(client s3client.Client, logger PlanLogger) *FSToS3Planner {
-	if logger == nil {
-		logger = &NullLogger{}
-	}
+func NewFSToS3Planner(client s3client.Client, logger logger.Logger) *FSToS3Planner {
 	return &FSToS3Planner{
 		client: client,
 		logger: logger,
@@ -78,7 +76,6 @@ func (p *FSToS3Planner) Plan(ctx context.Context, source Source, dest Destinatio
 	}
 
 	phase1Result := Phase1Compare(localFiles, s3Objects, opts.DeleteEnabled)
-	p.logger.PhaseComplete("Phase1", len(localFiles)+len(s3Objects))
 
 	checksums, err := p.Phase2CollectChecksums(ctx, phase1Result.NeedChecksum, source.Path, bucket, prefix)
 	if err != nil {
@@ -90,7 +87,6 @@ func (p *FSToS3Planner) Plan(ctx context.Context, source Source, dest Destinatio
 		s3Prefix = bucket + "/" + prefix
 	}
 	items := Phase3GeneratePlan(phase1Result, checksums, source.Path, s3Prefix)
-	p.logger.PhaseComplete("Phase3", len(items))
 
 	// Calculate checksums for upload items
 	for i, item := range items {
@@ -146,7 +142,6 @@ func (p *FSToS3Planner) gatherLocalFiles(basePath string, excludes []string) ([]
 }
 
 func (p *FSToS3Planner) Phase2CollectChecksums(ctx context.Context, items []ItemRef, localBase string, bucket string, prefix string) ([]ChecksumData, error) {
-	p.logger.PhaseStart("Phase2", len(items))
 
 	var checksums []ChecksumData
 	for _, item := range items {
@@ -170,21 +165,11 @@ func (p *FSToS3Planner) Phase2CollectChecksums(ctx context.Context, items []Item
 			SourceChecksum: sourceChecksum,
 			DestChecksum:   objInfo.Checksum,
 		})
-
-		p.logger.ItemProcessed("Phase2", item.Path, "checksum")
 	}
 
-	p.logger.PhaseComplete("Phase2", len(checksums))
 	return checksums, nil
 }
 
-type NullLogger struct{}
-
-func (l *NullLogger) PhaseStart(phase string, totalItems int) {}
-
-func (l *NullLogger) ItemProcessed(phase string, item string, action string) {}
-
-func (l *NullLogger) PhaseComplete(phase string, processedItems int) {}
 
 func parseS3URI(uri string) (bucket, prefix string, err error) {
 	if !strings.HasPrefix(uri, "s3://") {
