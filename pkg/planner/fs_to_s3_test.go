@@ -21,19 +21,19 @@ func TestCalculateFileChecksum(t *testing.T) {
 		{
 			name:     "hello world file",
 			filename: "hello.txt",
-			want:     "d4a9be4326add24d", // CRC64NVME of "Hello, World!"
+			want:     "4a85d76f1ebb2a91", // CRC64NVME of "Hello, World!\n"
 			wantErr:  false,
 		},
 		{
 			name:     "multiline file",
 			filename: "multiline.txt",
-			want:     "288df6b7f349bd37", // CRC64NVME of "Line 1\nLine 2\nLine 3"
+			want:     "4cc325f201bdbf95", // CRC64NVME of "Line 1\nLine 2\nLine 3\n"
 			wantErr:  false,
 		},
 		{
 			name:     "known hash file",
 			filename: "known_hash.txt",
-			want:     "d76c54054954c143", // CRC64NVME of "The quick brown fox jumps over the lazy dog"
+			want:     "db25fad2c8ea898a", // CRC64NVME of "The quick brown fox jumps over the lazy dog\n"
 			wantErr:  false,
 		},
 		{
