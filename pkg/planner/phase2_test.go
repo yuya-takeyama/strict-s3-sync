@@ -31,8 +31,8 @@ func TestPhase2CollectChecksums(t *testing.T) {
 			bucket:    "test-bucket",
 			prefix:    "prefix",
 			mockSetup: func(m *mockS3Client) {
-				m.headObjectFunc = func(ctx context.Context, bucket, key string) (*s3client.ObjectInfo, error) {
-					if bucket == "test-bucket" && key == "prefix/hello.txt" {
+				m.headObjectFunc = func(ctx context.Context, req *s3client.HeadObjectRequest) (*s3client.ObjectInfo, error) {
+					if req.Bucket == "test-bucket" && req.Key == "prefix/hello.txt" {
 						return &s3client.ObjectInfo{
 							Size:     13,
 							Checksum: "abcdef123456",
@@ -61,8 +61,8 @@ func TestPhase2CollectChecksums(t *testing.T) {
 			bucket:    "test-bucket",
 			prefix:    "",
 			mockSetup: func(m *mockS3Client) {
-				m.headObjectFunc = func(ctx context.Context, bucket, key string) (*s3client.ObjectInfo, error) {
-					switch key {
+				m.headObjectFunc = func(ctx context.Context, req *s3client.HeadObjectRequest) (*s3client.ObjectInfo, error) {
+					switch req.Key {
 					case "hello.txt":
 						return &s3client.ObjectInfo{
 							Size:     13,
@@ -74,7 +74,7 @@ func TestPhase2CollectChecksums(t *testing.T) {
 							Checksum: "remote-empty-checksum",
 						}, nil
 					}
-					return nil, fmt.Errorf("unexpected key: %s", key)
+					return nil, fmt.Errorf("unexpected key: %s", req.Key)
 				}
 			},
 			want: []ChecksumData{
@@ -116,7 +116,7 @@ func TestPhase2CollectChecksums(t *testing.T) {
 			bucket:    "test-bucket",
 			prefix:    "",
 			mockSetup: func(m *mockS3Client) {
-				m.headObjectFunc = func(ctx context.Context, bucket, key string) (*s3client.ObjectInfo, error) {
+				m.headObjectFunc = func(ctx context.Context, req *s3client.HeadObjectRequest) (*s3client.ObjectInfo, error) {
 					return nil, fmt.Errorf("S3 error: access denied")
 				}
 			},
@@ -146,14 +146,14 @@ func TestPhase2CollectChecksums(t *testing.T) {
 			bucket:    "test-bucket",
 			prefix:    "path/to/files",
 			mockSetup: func(m *mockS3Client) {
-				m.headObjectFunc = func(ctx context.Context, bucket, key string) (*s3client.ObjectInfo, error) {
-					if bucket == "test-bucket" && key == path.Join("path/to/files", "hello.txt") {
+				m.headObjectFunc = func(ctx context.Context, req *s3client.HeadObjectRequest) (*s3client.ObjectInfo, error) {
+					if req.Bucket == "test-bucket" && req.Key == path.Join("path/to/files", "hello.txt") {
 						return &s3client.ObjectInfo{
 							Size:     13,
 							Checksum: "nested-checksum",
 						}, nil
 					}
-					return nil, fmt.Errorf("unexpected call: bucket=%s, key=%s", bucket, key)
+					return nil, fmt.Errorf("unexpected call: bucket=%s, key=%s", req.Bucket, req.Key)
 				}
 			},
 			want: []ChecksumData{

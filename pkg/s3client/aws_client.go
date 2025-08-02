@@ -21,12 +21,12 @@ func NewAWSClient(cfg aws.Config) *AWSClient {
 	}
 }
 
-func (c *AWSClient) ListObjects(ctx context.Context, bucket, prefix string) ([]ItemMetadata, error) {
+func (c *AWSClient) ListObjects(ctx context.Context, req *ListObjectsRequest) ([]ItemMetadata, error) {
 	var items []ItemMetadata
 
 	paginator := s3.NewListObjectsV2Paginator(c.client, &s3.ListObjectsV2Input{
-		Bucket: aws.String(bucket),
-		Prefix: aws.String(prefix),
+		Bucket: aws.String(req.Bucket),
+		Prefix: aws.String(req.Prefix),
 	})
 
 	for paginator.HasMorePages() {
@@ -41,8 +41,8 @@ func (c *AWSClient) ListObjects(ctx context.Context, bucket, prefix string) ([]I
 			}
 
 			key := *obj.Key
-			if prefix != "" {
-				key = strings.TrimPrefix(key, prefix+"/")
+			if req.Prefix != "" {
+				key = strings.TrimPrefix(key, req.Prefix+"/")
 			}
 
 			items = append(items, ItemMetadata{
@@ -56,10 +56,10 @@ func (c *AWSClient) ListObjects(ctx context.Context, bucket, prefix string) ([]I
 	return items, nil
 }
 
-func (c *AWSClient) HeadObject(ctx context.Context, bucket, key string) (*ObjectInfo, error) {
+func (c *AWSClient) HeadObject(ctx context.Context, req *HeadObjectRequest) (*ObjectInfo, error) {
 	resp, err := c.client.HeadObject(ctx, &s3.HeadObjectInput{
-		Bucket:       aws.String(bucket),
-		Key:          aws.String(key),
+		Bucket:       aws.String(req.Bucket),
+		Key:          aws.String(req.Key),
 		ChecksumMode: types.ChecksumModeEnabled,
 	})
 	if err != nil {
@@ -101,10 +101,10 @@ func (c *AWSClient) PutObject(ctx context.Context, req *PutObjectRequest) error 
 	return nil
 }
 
-func (c *AWSClient) DeleteObject(ctx context.Context, bucket, key string) error {
+func (c *AWSClient) DeleteObject(ctx context.Context, req *DeleteObjectRequest) error {
 	_, err := c.client.DeleteObject(ctx, &s3.DeleteObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
+		Bucket: aws.String(req.Bucket),
+		Key:    aws.String(req.Key),
 	})
 	if err != nil {
 		return fmt.Errorf("failed to delete object: %w", err)

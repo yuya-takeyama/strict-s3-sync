@@ -142,7 +142,10 @@ func (e *Executor) deleteObject(ctx context.Context, item planner.Item) error {
 		return err
 	}
 
-	err = e.client.DeleteObject(ctx, bucket, key)
+	err = e.client.DeleteObject(ctx, &s3client.DeleteObjectRequest{
+		Bucket: bucket,
+		Key:    key,
+	})
 	if err != nil {
 		return fmt.Errorf("failed to delete: %w", err)
 	}

@@ -50,7 +50,10 @@ func (p *FSToS3Planner) Plan(ctx context.Context, source Source, dest Destinatio
 		return nil, fmt.Errorf("failed to gather local files: %w", err)
 	}
 
-	s3ClientObjects, err := p.client.ListObjects(ctx, bucket, prefix)
+	s3ClientObjects, err := p.client.ListObjects(ctx, &s3client.ListObjectsRequest{
+		Bucket: bucket,
+		Prefix: prefix,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list S3 objects: %w", err)
 	}
@@ -154,7 +157,10 @@ func (p *FSToS3Planner) Phase2CollectChecksums(ctx context.Context, items []Item
 		}
 
 		s3Key := path.Join(prefix, item.Path)
-		objInfo, err := p.client.HeadObject(ctx, bucket, s3Key)
+		objInfo, err := p.client.HeadObject(ctx, &s3client.HeadObjectRequest{
+			Bucket: bucket,
+			Key:    s3Key,
+		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to head object %s: %w", s3Key, err)
 		}

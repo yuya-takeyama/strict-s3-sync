@@ -9,22 +9,22 @@ import (
 
 // mockS3Client is a mock implementation of s3client.Client for testing
 type mockS3Client struct {
-	listObjectsFunc  func(ctx context.Context, bucket, prefix string) ([]s3client.ItemMetadata, error)
-	headObjectFunc   func(ctx context.Context, bucket, key string) (*s3client.ObjectInfo, error)
+	listObjectsFunc  func(ctx context.Context, req *s3client.ListObjectsRequest) ([]s3client.ItemMetadata, error)
+	headObjectFunc   func(ctx context.Context, req *s3client.HeadObjectRequest) (*s3client.ObjectInfo, error)
 	putObjectFunc    func(ctx context.Context, req *s3client.PutObjectRequest) error
-	deleteObjectFunc func(ctx context.Context, bucket, key string) error
+	deleteObjectFunc func(ctx context.Context, req *s3client.DeleteObjectRequest) error
 }
 
-func (m *mockS3Client) ListObjects(ctx context.Context, bucket, prefix string) ([]s3client.ItemMetadata, error) {
+func (m *mockS3Client) ListObjects(ctx context.Context, req *s3client.ListObjectsRequest) ([]s3client.ItemMetadata, error) {
 	if m.listObjectsFunc != nil {
-		return m.listObjectsFunc(ctx, bucket, prefix)
+		return m.listObjectsFunc(ctx, req)
 	}
 	return nil, fmt.Errorf("ListObjects not implemented")
 }
 
-func (m *mockS3Client) HeadObject(ctx context.Context, bucket, key string) (*s3client.ObjectInfo, error) {
+func (m *mockS3Client) HeadObject(ctx context.Context, req *s3client.HeadObjectRequest) (*s3client.ObjectInfo, error) {
 	if m.headObjectFunc != nil {
-		return m.headObjectFunc(ctx, bucket, key)
+		return m.headObjectFunc(ctx, req)
 	}
 	return nil, fmt.Errorf("HeadObject not implemented")
 }
@@ -36,9 +36,9 @@ func (m *mockS3Client) PutObject(ctx context.Context, req *s3client.PutObjectReq
 	return fmt.Errorf("PutObject not implemented")
 }
 
-func (m *mockS3Client) DeleteObject(ctx context.Context, bucket, key string) error {
+func (m *mockS3Client) DeleteObject(ctx context.Context, req *s3client.DeleteObjectRequest) error {
 	if m.deleteObjectFunc != nil {
-		return m.deleteObjectFunc(ctx, bucket, key)
+		return m.deleteObjectFunc(ctx, req)
 	}
 	return fmt.Errorf("DeleteObject not implemented")
 }
