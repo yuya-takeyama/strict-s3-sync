@@ -26,7 +26,31 @@ go.work.sum
 
 # env file
 .env
+.envrc
 
 # Editor/IDE
 # .idea/
 # .vscode/
+
+**/.claude/settings.local.json
+CLAUDE.local.json
+
+# Build output
+/super-s3-sync
+/strict-s3-sync
+
+# Temporary files
+tmp/
+*.tmp
+
+# Test data
+# testdata/  # Go projects typically commit testdata directories
+
+# aqua
+.aqua/
+
+# Claude Code related files (should not be in this repo)
+cc-slack
+data/
+logs/
+migrations/
