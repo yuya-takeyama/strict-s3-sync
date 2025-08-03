@@ -1,5 +1,11 @@
 # Changelog
 
+## [v0.0.6](https://github.com/yuya-takeyama/strict-s3-sync/compare/v0.0.5...v0.0.6) - 2025-08-03
+- Delete VERSION by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/25
+- chore(deps): pin Songmu/tagpr action to v1.7.0 by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/27
+- feat(workflows): enable manual release workflow triggering by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/28
+- fix(workflows): enable GitHub App to trigger release workflow by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/29
+
 ## [v0.0.5](https://github.com/yuya-takeyama/strict-s3-sync/compare/v0.0.4...v0.0.5) - 2025-08-03
 - feat(claude): add prettier hooks for YAML, JSON, and Markdown files by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/22
 - feat: add development tools and migrate release workflow by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/24
