@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -23,15 +25,36 @@ var (
 )
 
 var (
-	dryRun      bool
-	deleteFlag  bool
-	excludes    []string
-	includes    []string
-	quiet       bool
-	concurrency int
-	profile     string
-	region      string
+	dryRun         bool
+	deleteFlag     bool
+	excludes       []string
+	includes       []string
+	quiet          bool
+	concurrency    int
+	profile        string
+	region         string
+	resultJSONFile string
 )
+
+type SyncResult struct {
+	Changes []FileChange `json:"changes"`
+	Summary Summary      `json:"summary"`
+}
+
+type FileChange struct {
+	Action string `json:"action"`
+	Source string `json:"source,omitempty"`
+	Target string `json:"target"`
+	Error  string `json:"error,omitempty"`
+}
+
+type Summary struct {
+	TotalFiles int `json:"total_files"`
+	Created    int `json:"created"`
+	Updated    int `json:"updated"`
+	Deleted    int `json:"deleted"`
+	Failed     int `json:"failed"`
+}
 
 func main() {
 	rootCmd := &cobra.Command{
@@ -52,6 +75,7 @@ for accurate file comparison, ensuring data integrity.`,
 	rootCmd.Flags().IntVar(&concurrency, "concurrency", 32, "Number of concurrent operations")
 	rootCmd.Flags().StringVar(&profile, "profile", "", "AWS profile to use")
 	rootCmd.Flags().StringVar(&region, "region", "", "AWS region (uses default if not specified)")
+	rootCmd.Flags().StringVar(&resultJSONFile, "result-json-file", "", "Path to output result as JSON file")
 
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
@@ -114,16 +138,53 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 
 	if len(items) == 0 {
+		if resultJSONFile != "" {
+			// Write empty result
+			result := SyncResult{
+				Changes: []FileChange{},
+				Summary: Summary{},
+			}
+			if err := writeJSONResult(resultJSONFile, result); err != nil {
+				return fmt.Errorf("failed to write JSON result: %w", err)
+			}
+		}
 		return nil
 	}
+
+	var syncResult SyncResult
 
 	if dryRun {
 		for _, item := range items {
 			switch item.Action {
 			case planner.ActionUpload:
 				syncLogger.Upload(item.LocalPath, fmt.Sprintf("s3://%s/%s", item.Bucket, item.Key))
+				action := getUploadActionName(item.Reason)
+				change := FileChange{
+					Action: action,
+					Source: getAbsolutePath(item.LocalPath),
+					Target: formatS3Path(item.Bucket, item.Key),
+				}
+				syncResult.Changes = append(syncResult.Changes, change)
+				if action == "create" {
+					syncResult.Summary.Created++
+				} else {
+					syncResult.Summary.Updated++
+				}
 			case planner.ActionDelete:
 				syncLogger.Delete(fmt.Sprintf("s3://%s/%s", item.Bucket, item.Key))
+				change := FileChange{
+					Action: "delete",
+					Target: formatS3Path(item.Bucket, item.Key),
+				}
+				syncResult.Changes = append(syncResult.Changes, change)
+				syncResult.Summary.Deleted++
+			}
+		}
+		syncResult.Summary.TotalFiles = len(items)
+
+		if resultJSONFile != "" {
+			if err := writeJSONResult(resultJSONFile, syncResult); err != nil {
+				return fmt.Errorf("failed to write JSON result: %w", err)
 			}
 		}
 		return nil
@@ -134,9 +195,64 @@ func run(cmd *cobra.Command, args []string) error {
 
 	var failed int
 	for _, result := range results {
+		var change FileChange
 		if result.Error != nil {
 			failed++
 			log.Printf("Error: %s/%s: %v", result.Item.Bucket, result.Item.Key, result.Error)
+			action := getActionName(result.Item.Action)
+			if result.Item.Action == planner.ActionUpload {
+				action = getUploadActionName(result.Item.Reason)
+			}
+			if result.Item.Action == planner.ActionUpload {
+				change = FileChange{
+					Action: action,
+					Source: getAbsolutePath(result.Item.LocalPath),
+					Target: formatS3Path(result.Item.Bucket, result.Item.Key),
+					Error:  result.Error.Error(),
+				}
+			} else {
+				change = FileChange{
+					Action: action,
+					Target: formatS3Path(result.Item.Bucket, result.Item.Key),
+					Error:  result.Error.Error(),
+				}
+			}
+			syncResult.Summary.Failed++
+		} else {
+			action := getActionName(result.Item.Action)
+			if result.Item.Action == planner.ActionUpload {
+				action = getUploadActionName(result.Item.Reason)
+			}
+			if result.Item.Action == planner.ActionUpload {
+				change = FileChange{
+					Action: action,
+					Source: getAbsolutePath(result.Item.LocalPath),
+					Target: formatS3Path(result.Item.Bucket, result.Item.Key),
+				}
+			} else {
+				change = FileChange{
+					Action: action,
+					Target: formatS3Path(result.Item.Bucket, result.Item.Key),
+				}
+			}
+			switch result.Item.Action {
+			case planner.ActionUpload:
+				if action == "create" {
+					syncResult.Summary.Created++
+				} else {
+					syncResult.Summary.Updated++
+				}
+			case planner.ActionDelete:
+				syncResult.Summary.Deleted++
+			}
+		}
+		syncResult.Changes = append(syncResult.Changes, change)
+	}
+	syncResult.Summary.TotalFiles = len(results)
+
+	if resultJSONFile != "" {
+		if err := writeJSONResult(resultJSONFile, syncResult); err != nil {
+			return fmt.Errorf("failed to write JSON result: %w", err)
 		}
 	}
 
@@ -145,4 +261,47 @@ func run(cmd *cobra.Command, args []string) error {
 	}
 
 	return nil
+}
+
+func writeJSONResult(path string, result SyncResult) error {
+	data, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal JSON: %w", err)
+	}
+
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	return nil
+}
+
+func getActionName(action planner.Action) string {
+	switch action {
+	case planner.ActionUpload:
+		return "create" // Use getUploadActionName for accurate create/update distinction
+	case planner.ActionDelete:
+		return "delete"
+	default:
+		return "unknown"
+	}
+}
+
+func getUploadActionName(reason string) string {
+	if reason == "new file" {
+		return "create"
+	}
+	return "update"
+}
+
+func getAbsolutePath(path string) string {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return path // fallback to original path
+	}
+	return absPath
+}
+
+func formatS3Path(bucket, key string) string {
+	return fmt.Sprintf("s3://%s/%s", bucket, key)
 }
