@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -41,12 +42,10 @@ type SyncResult struct {
 }
 
 type FileChange struct {
-	Path      string `json:"path"`
-	Action    string `json:"action"`
-	Error     string `json:"error,omitempty"`
-	LocalPath string `json:"local_path,omitempty"`
-	S3Key     string `json:"s3_key,omitempty"`
-	Bucket    string `json:"bucket,omitempty"`
+	From   string `json:"from"`
+	To     string `json:"to"`
+	Action string `json:"action"`
+	Error  string `json:"error,omitempty"`
 }
 
 type Summary struct {
@@ -161,11 +160,9 @@ func run(cmd *cobra.Command, args []string) error {
 				syncLogger.Upload(item.LocalPath, fmt.Sprintf("s3://%s/%s", item.Bucket, item.Key))
 				action := getUploadActionName(item.Reason)
 				change := FileChange{
-					Path:      item.LocalPath,
-					Action:    action,
-					LocalPath: item.LocalPath,
-					S3Key:     item.Key,
-					Bucket:    item.Bucket,
+					From:   getAbsolutePath(item.LocalPath),
+					To:     formatS3Path(item.Bucket, item.Key),
+					Action: action,
 				}
 				syncResult.Changes = append(syncResult.Changes, change)
 				if action == "create" {
@@ -176,10 +173,9 @@ func run(cmd *cobra.Command, args []string) error {
 			case planner.ActionDelete:
 				syncLogger.Delete(fmt.Sprintf("s3://%s/%s", item.Bucket, item.Key))
 				change := FileChange{
-					Path:   fmt.Sprintf("s3://%s/%s", item.Bucket, item.Key),
+					From:   formatS3Path(item.Bucket, item.Key),
+					To:     "", // deleted
 					Action: "delete",
-					S3Key:  item.Key,
-					Bucket: item.Bucket,
 				}
 				syncResult.Changes = append(syncResult.Changes, change)
 				syncResult.Summary.Deleted++
@@ -208,13 +204,20 @@ func run(cmd *cobra.Command, args []string) error {
 			if result.Item.Action == planner.ActionUpload {
 				action = getUploadActionName(result.Item.Reason)
 			}
-			change = FileChange{
-				Path:      result.Item.LocalPath,
-				Action:    action,
-				Error:     result.Error.Error(),
-				LocalPath: result.Item.LocalPath,
-				S3Key:     result.Item.Key,
-				Bucket:    result.Item.Bucket,
+			if result.Item.Action == planner.ActionUpload {
+				change = FileChange{
+					From:   getAbsolutePath(result.Item.LocalPath),
+					To:     formatS3Path(result.Item.Bucket, result.Item.Key),
+					Action: action,
+					Error:  result.Error.Error(),
+				}
+			} else {
+				change = FileChange{
+					From:   formatS3Path(result.Item.Bucket, result.Item.Key),
+					To:     "", // deleted
+					Action: action,
+					Error:  result.Error.Error(),
+				}
 			}
 			syncResult.Summary.Failed++
 		} else {
@@ -222,12 +225,18 @@ func run(cmd *cobra.Command, args []string) error {
 			if result.Item.Action == planner.ActionUpload {
 				action = getUploadActionName(result.Item.Reason)
 			}
-			change = FileChange{
-				Path:      result.Item.LocalPath,
-				Action:    action,
-				LocalPath: result.Item.LocalPath,
-				S3Key:     result.Item.Key,
-				Bucket:    result.Item.Bucket,
+			if result.Item.Action == planner.ActionUpload {
+				change = FileChange{
+					From:   getAbsolutePath(result.Item.LocalPath),
+					To:     formatS3Path(result.Item.Bucket, result.Item.Key),
+					Action: action,
+				}
+			} else {
+				change = FileChange{
+					From:   formatS3Path(result.Item.Bucket, result.Item.Key),
+					To:     "", // deleted
+					Action: action,
+				}
 			}
 			switch result.Item.Action {
 			case planner.ActionUpload:
@@ -286,4 +295,16 @@ func getUploadActionName(reason string) string {
 		return "create"
 	}
 	return "update"
+}
+
+func getAbsolutePath(path string) string {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return path // fallback to original path
+	}
+	return absPath
+}
+
+func formatS3Path(bucket, key string) string {
+	return fmt.Sprintf("s3://%s/%s", bucket, key)
 }
