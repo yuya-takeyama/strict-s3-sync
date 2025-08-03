@@ -99,42 +99,8 @@ func (p *FSToS3Planner) Plan(ctx context.Context, source Source, dest Destinatio
 }
 
 func (p *FSToS3Planner) gatherLocalFiles(basePath string, excludes []string) ([]ItemMetadata, error) {
-	var items []ItemMetadata
-
-	err := filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if info.IsDir() {
-			return nil
-		}
-
-		relPath, err := filepath.Rel(basePath, path)
-		if err != nil {
-			return err
-		}
-
-		relPath = filepath.ToSlash(relPath)
-
-		excluded, err := IsExcluded(relPath, excludes)
-		if err != nil {
-			return err
-		}
-		if excluded {
-			return nil
-		}
-
-		items = append(items, ItemMetadata{
-			Path:    relPath,
-			Size:    info.Size(),
-			ModTime: info.ModTime(),
-		})
-
-		return nil
-	})
-
-	return items, err
+	// 並列処理版を使用
+	return p.parallelGatherLocalFiles(basePath, excludes)
 }
 
 func (p *FSToS3Planner) Phase2CollectChecksums(ctx context.Context, items []ItemRef, localBase string, bucket string, prefix string) ([]ChecksumData, error) {
