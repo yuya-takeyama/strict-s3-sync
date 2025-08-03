@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.1.0](https://github.com/yuya-takeyama/strict-s3-sync/compare/v0.0.12...v0.1.0) - 2025-08-03
+- feat: add --result-json-file option for programmatic result processing by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/44
+
 ## [v0.0.12](https://github.com/yuya-takeyama/strict-s3-sync/compare/v0.0.11...v0.0.12) - 2025-08-03
 - Create custom release workflow to coexist with tagpr by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/42
 
