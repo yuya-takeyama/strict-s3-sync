@@ -13,11 +13,27 @@ A strict S3 sync tool that uses CRC64NVME checksums for accurate synchronization
 
 ## Installation
 
+### Using aqua (Recommended)
+
+```bash
+# Install aqua if not already installed
+# https://aquaproj.github.io/
+
+# Install strict-s3-sync
+aqua g -i yuya-takeyama/strict-s3-sync
+```
+
+### Using go install
+
 ```bash
 go install github.com/yuya-takeyama/strict-s3-sync/cmd/strict-s3-sync@latest
 ```
 
-Or build from source:
+### Download binary
+
+Download from [Releases](https://github.com/yuya-takeyama/strict-s3-sync/releases)
+
+### Build from source
 
 ```bash
 git clone https://github.com/yuya-takeyama/strict-s3-sync
