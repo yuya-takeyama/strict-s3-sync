@@ -9,10 +9,11 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-      actions: write
       issues: write
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      - uses: Songmu/tagpr@v1.7.0
+        with:
+          persist-credentials: true
+      - uses: Songmu/tagpr@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
