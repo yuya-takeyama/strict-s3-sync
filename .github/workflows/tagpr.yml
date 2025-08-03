@@ -6,14 +6,21 @@ on:
 jobs:
   tagpr:
     runs-on: ubuntu-latest
+    environment: main
     permissions:
       contents: write
       pull-requests: write
       issues: write
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
+      
+      - name: Generate GitHub App token
+        id: generate_token
+        uses: actions/create-github-app-token@f2acddfb5195534d487896a656232b016a682f3c # v1.9.0
         with:
-          persist-credentials: true
+          app-id: ${{ vars.GH_APP_ID }}
+          private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
+      
       - uses: Songmu/tagpr@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
