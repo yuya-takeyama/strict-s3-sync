@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.0.3](https://github.com/yuya-takeyama/strict-s3-sync/compare/v0.0.2...v0.0.3) - 2025-08-03
+- fix: Update release workflow tag pattern to match semver by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/18
+
 ## [v0.0.2](https://github.com/yuya-takeyama/strict-s3-sync/compare/v0.0.1...v0.0.2) - 2025-08-03
 - fix: Update tagpr workflow to match official documentation by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/16
 
