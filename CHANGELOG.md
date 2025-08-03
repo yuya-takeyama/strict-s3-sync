@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.0.7](https://github.com/yuya-takeyama/strict-s3-sync/compare/v0.0.6...v0.0.7) - 2025-08-03
+- fix: remove invalid toolchain directive from go.mod by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/32
+
 ## [v0.0.6](https://github.com/yuya-takeyama/strict-s3-sync/compare/v0.0.5...v0.0.6) - 2025-08-03
 - Delete VERSION by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/25
 - chore(deps): pin Songmu/tagpr action to v1.7.0 by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/27
