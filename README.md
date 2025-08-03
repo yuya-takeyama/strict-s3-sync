@@ -98,19 +98,18 @@ When using `--result-json-file`, the tool outputs a structured JSON report:
 {
   "changes": [
     {
-      "from": "/Users/yuya/project/file1.txt",
-      "to": "s3://my-bucket/prefix/file1.txt",
-      "action": "create"
+      "action": "create",
+      "source": "/Users/yuya/project/file1.txt",
+      "target": "s3://my-bucket/prefix/file1.txt"
     },
     {
-      "from": "/Users/yuya/project/file2.txt",
-      "to": "s3://my-bucket/prefix/file2.txt",
-      "action": "update"
+      "action": "update",
+      "source": "/Users/yuya/project/file2.txt",
+      "target": "s3://my-bucket/prefix/file2.txt"
     },
     {
-      "from": "s3://my-bucket/prefix/old-file.txt",
-      "to": "",
-      "action": "delete"
+      "action": "delete",
+      "target": "s3://my-bucket/prefix/old-file.txt"
     }
   ],
   "summary": {

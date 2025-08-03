@@ -42,9 +42,9 @@ type SyncResult struct {
 }
 
 type FileChange struct {
-	From   string `json:"from"`
-	To     string `json:"to"`
 	Action string `json:"action"`
+	Source string `json:"source,omitempty"`
+	Target string `json:"target"`
 	Error  string `json:"error,omitempty"`
 }
 
@@ -160,9 +160,9 @@ func run(cmd *cobra.Command, args []string) error {
 				syncLogger.Upload(item.LocalPath, fmt.Sprintf("s3://%s/%s", item.Bucket, item.Key))
 				action := getUploadActionName(item.Reason)
 				change := FileChange{
-					From:   getAbsolutePath(item.LocalPath),
-					To:     formatS3Path(item.Bucket, item.Key),
 					Action: action,
+					Source: getAbsolutePath(item.LocalPath),
+					Target: formatS3Path(item.Bucket, item.Key),
 				}
 				syncResult.Changes = append(syncResult.Changes, change)
 				if action == "create" {
@@ -173,9 +173,8 @@ func run(cmd *cobra.Command, args []string) error {
 			case planner.ActionDelete:
 				syncLogger.Delete(fmt.Sprintf("s3://%s/%s", item.Bucket, item.Key))
 				change := FileChange{
-					From:   formatS3Path(item.Bucket, item.Key),
-					To:     "", // deleted
 					Action: "delete",
+					Target: formatS3Path(item.Bucket, item.Key),
 				}
 				syncResult.Changes = append(syncResult.Changes, change)
 				syncResult.Summary.Deleted++
@@ -206,16 +205,15 @@ func run(cmd *cobra.Command, args []string) error {
 			}
 			if result.Item.Action == planner.ActionUpload {
 				change = FileChange{
-					From:   getAbsolutePath(result.Item.LocalPath),
-					To:     formatS3Path(result.Item.Bucket, result.Item.Key),
 					Action: action,
+					Source: getAbsolutePath(result.Item.LocalPath),
+					Target: formatS3Path(result.Item.Bucket, result.Item.Key),
 					Error:  result.Error.Error(),
 				}
 			} else {
 				change = FileChange{
-					From:   formatS3Path(result.Item.Bucket, result.Item.Key),
-					To:     "", // deleted
 					Action: action,
+					Target: formatS3Path(result.Item.Bucket, result.Item.Key),
 					Error:  result.Error.Error(),
 				}
 			}
@@ -227,15 +225,14 @@ func run(cmd *cobra.Command, args []string) error {
 			}
 			if result.Item.Action == planner.ActionUpload {
 				change = FileChange{
-					From:   getAbsolutePath(result.Item.LocalPath),
-					To:     formatS3Path(result.Item.Bucket, result.Item.Key),
 					Action: action,
+					Source: getAbsolutePath(result.Item.LocalPath),
+					Target: formatS3Path(result.Item.Bucket, result.Item.Key),
 				}
 			} else {
 				change = FileChange{
-					From:   formatS3Path(result.Item.Bucket, result.Item.Key),
-					To:     "", // deleted
 					Action: action,
+					Target: formatS3Path(result.Item.Bucket, result.Item.Key),
 				}
 			}
 			switch result.Item.Action {
