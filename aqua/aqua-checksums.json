@@ -1,6 +1,31 @@
 {
   "checksums": [
     {
+      "id": "github_release/github.com/anchore/syft/v1.20.0/syft_1.20.0_darwin_amd64.tar.gz",
+      "checksum": "5FDF7AFD0F1BFDBB2A1A575EACEF8E10EDFCB4783631BAAA7572A9F4A4D86441",
+      "algorithm": "sha256"
+    },
+    {
+      "id": "github_release/github.com/anchore/syft/v1.20.0/syft_1.20.0_darwin_arm64.tar.gz",
+      "checksum": "91365712A06AF0C0DCD06F5E87FC8791C4332831B3DD6F5474ACAAF803D71D82",
+      "algorithm": "sha256"
+    },
+    {
+      "id": "github_release/github.com/anchore/syft/v1.20.0/syft_1.20.0_linux_amd64.tar.gz",
+      "checksum": "689E12C5CBF67521CE61B9C126068F9EAABE1223E77971B2FEDE50033FF6B5CC",
+      "algorithm": "sha256"
+    },
+    {
+      "id": "github_release/github.com/anchore/syft/v1.20.0/syft_1.20.0_linux_arm64.tar.gz",
+      "checksum": "53F76737DDBF425C89240D5B0BE0990B1A71E66890B44F19743221B17E6EE635",
+      "algorithm": "sha256"
+    },
+    {
+      "id": "github_release/github.com/anchore/syft/v1.20.0/syft_1.20.0_windows_amd64.zip",
+      "checksum": "B8BFDEDB261DE2A69768097422A73BC72273EE92136FF676A20C3161E658881F",
+      "algorithm": "sha256"
+    },
+    {
       "id": "github_release/github.com/cli/cli/v2.76.0/gh_2.76.0_linux_amd64.tar.gz",
       "checksum": "BC46A0F43FA357CDFCFFC77F92A48303F5BACD97CF3E59A807DA2682CA4126DA",
       "algorithm": "sha256"
