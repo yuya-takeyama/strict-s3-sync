@@ -56,28 +56,74 @@ strict-s3-sync <LocalPath> <S3Uri> [options]
 - `--profile <profile>`: AWS profile to use
 - `--region <region>`: AWS region (uses default if not specified)
 - `--quiet`: Suppress output
+- `--result-json-file <path>`: Output sync results to a JSON file (useful for CI/CD pipelines)
 
 ### Examples
 
 Basic sync:
+
 ```bash
 strict-s3-sync ./local-folder s3://my-bucket/prefix/
 ```
 
 Sync with exclusions:
+
 ```bash
 strict-s3-sync ./local-folder s3://my-bucket/prefix/ --exclude "*.tmp" --exclude "**/.git/**"
 ```
 
 Sync with deletion:
+
 ```bash
 strict-s3-sync ./local-folder s3://my-bucket/prefix/ --delete
 ```
 
 Dry run to preview changes:
+
 ```bash
 strict-s3-sync ./local-folder s3://my-bucket/prefix/ --delete --dryrun
 ```
+
+Generate JSON report for CI/CD:
+
+```bash
+strict-s3-sync ./local-folder s3://my-bucket/prefix/ --result-json-file sync-result.json
+```
+
+## JSON Output Format
+
+When using `--result-json-file`, the tool outputs a structured JSON report:
+
+```json
+{
+  "changes": [
+    {
+      "path": "file1.txt",
+      "action": "create",
+      "local_path": "file1.txt",
+      "s3_key": "prefix/file1.txt",
+      "bucket": "my-bucket"
+    },
+    {
+      "path": "file2.txt",
+      "action": "update",
+      "local_path": "file2.txt",
+      "s3_key": "prefix/file2.txt",
+      "bucket": "my-bucket"
+    }
+  ],
+  "summary": {
+    "total_files": 2,
+    "created": 1,
+    "updated": 1,
+    "deleted": 0,
+    "skipped": 0,
+    "failed": 0
+  }
+}
+```
+
+Actions can be: `create`, `update`, `delete`, or `skip`.
 
 ## How it Works
 
@@ -109,10 +155,7 @@ strict-s3-sync ./local-folder s3://my-bucket/prefix/ --delete --dryrun
         "s3:PutObject",
         "s3:DeleteObject"
       ],
-      "Resource": [
-        "arn:aws:s3:::your-bucket",
-        "arn:aws:s3:::your-bucket/*"
-      ]
+      "Resource": ["arn:aws:s3:::your-bucket", "arn:aws:s3:::your-bucket/*"]
     }
   ]
 }
