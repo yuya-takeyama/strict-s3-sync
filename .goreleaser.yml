@@ -42,7 +42,7 @@ archives:
       {{- if .Arm }}v{{ .Arm }}{{ end }}
     format_overrides:
       - goos: windows
-        format: zip
+        formats: [zip]
 
 checksum:
   name_template: "{{ .ProjectName }}_{{ .Version }}_checksums.txt"
@@ -76,17 +76,17 @@ release:
   mode: append
   footer: |
     ## Installation
-    
+
     ### Using aqua
     ```bash
     aqua g -i yuya-takeyama/strict-s3-sync
     ```
-    
+
     ### Using go install
     ```bash
     go install github.com/yuya-takeyama/strict-s3-sync/cmd/strict-s3-sync@latest
     ```
-    
+
     ### Binary download
     Download the appropriate binary for your platform from the assets below.
 
