@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.0.10](https://github.com/yuya-takeyama/strict-s3-sync/compare/v0.0.9...v0.0.10) - 2025-08-03
+- Fix release workflow errors by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/38
+
 ## [v0.0.9](https://github.com/yuya-takeyama/strict-s3-sync/compare/v0.0.8...v0.0.9) - 2025-08-03
 - feat: add syft for SBOM generation by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/36
 
