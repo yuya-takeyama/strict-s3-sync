@@ -25,6 +25,8 @@ jobs:
         with:
           aqua_version: v2.43.1
           working_directory: aqua
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
 
       - name: Get dependencies
         run: |
