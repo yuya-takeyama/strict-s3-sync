@@ -1,0 +1,12 @@
+releaseBranch: main
+versionFile: VERSION
+vPrefix: true
+changelog:
+  filters:
+    Type:
+      - feat
+      - fix
+      - perf
+      - refactor
+release:
+  draft: false

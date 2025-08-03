@@ -16,6 +16,13 @@ import (
 )
 
 var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+	builtBy = "unknown"
+)
+
+var (
 	dryRun      bool
 	deleteFlag  bool
 	excludes    []string
@@ -29,11 +36,12 @@ var (
 func main() {
 	rootCmd := &cobra.Command{
 		Use:   "strict-s3-sync <LocalPath> <S3Uri>",
-		Short: "Strict S3 synchronization tool using SHA-256 checksums",
-		Long: `strict-s3-sync is a reliable S3 sync tool that uses SHA-256 checksums
+		Short: "Strict S3 synchronization tool using CRC64NVME checksums",
+		Long: `strict-s3-sync is a reliable S3 sync tool that uses CRC64NVME checksums
 for accurate file comparison, ensuring data integrity.`,
-		Args: cobra.ExactArgs(2),
-		RunE: run,
+		Version: fmt.Sprintf("%s (commit: %s, built at: %s by %s)", version, commit, date, builtBy),
+		Args:    cobra.ExactArgs(2),
+		RunE:    run,
 	}
 
 	rootCmd.Flags().BoolVar(&dryRun, "dryrun", false, "Shows operations without executing")
