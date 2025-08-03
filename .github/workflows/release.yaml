@@ -7,15 +7,207 @@ on:
 
 permissions: {}
 
+env:
+  AQUA_LOG_COLOR: always
+
 jobs:
-  release:
-    uses: suzuki-shunsuke/go-release-workflow/.github/workflows/release.yaml@d13097c9dbb3e199e90c4e8ee45d852c5b7d86ed # v6.0.1
-    with:
-      go-version-file: go.mod
-      aqua_policy_allow: true
-      aqua_version: v2.53.8
+  build:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    outputs:
+      hashes: ${{ steps.hash.outputs.hashes }}
     permissions:
-      contents: write
-      id-token: write
-      actions: read
-      attestations: write
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: aquaproj/aqua-installer@d1fe50798dbadd4eb5b98957290ca175f6b4870f # v4.0.2
+        with:
+          aqua_version: v2.53.8
+          policy_allow: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: remove changes
+        # Sometimes it is failed to release by goreleaser due to changes of go.sum
+        run: git checkout -- .
+
+      - name: fetch tags to release
+        run: git fetch --tags -f
+
+      - name: Unshallow
+        run: git fetch --prune --unshallow
+
+      - run: goreleaser -v
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - run: go-licenses --help
+
+      - run: go-licenses save ./cmd/strict-s3-sync --save_path third_party_licenses
+
+      - run: mkdir -p third_party_licenses/go
+
+      - run: |
+          version=$(go env GOVERSION)
+          curl -Lq -o third_party_licenses/go/LICENSE --retry 5 "https://raw.githubusercontent.com/golang/go/refs/tags/go${version#go}/LICENSE"
+
+      - name: Run GoReleaser
+        run: goreleaser release --skip publish --clean
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: dist
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.txt
+            dist/*.sbom.json
+            dist/*.jsonl
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: checksum
+          path: |
+            dist/*.txt
+
+      - name: Generate hashes
+        id: hash
+        run: |
+          # sha256sum generates sha256 hash for all artifacts.
+          # base64 -w0 encodes to base64 and outputs on a single line.
+          echo "hashes=$( (find dist -name "*.tar.gz" && find dist -name "*.zip") | xargs sha256sum | base64 -w0)" >> "$GITHUB_OUTPUT"
+
+  cosign:
+    timeout-minutes: 10
+    runs-on: ubuntu-24.04
+    needs: [build]
+    permissions:
+      id-token: write # required for cosign
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - uses: aquaproj/aqua-installer@d1fe50798dbadd4eb5b98957290ca175f6b4870f # v4.0.2
+        with:
+          aqua_version: v2.53.8
+          policy_allow: true
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: checksum
+          path: dist
+
+      - run: cosign version
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - run: |
+          checksum=$(find dist -name "*checksums.txt")
+          cosign sign-blob -y \
+            --output-signature "${checksum}.sig" \
+            --output-certificate "${checksum}.pem" \
+            --oidc-provider github \
+            "$checksum"
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: cosign
+          path: |
+            dist/*.pem
+            dist/*.sig
+
+  release:
+    timeout-minutes: 10
+    runs-on: ubuntu-24.04
+    needs: [cosign]
+    permissions:
+      contents: write # required to upload release assets
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: dist
+          path: dist
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: cosign
+          path: dist
+
+      - run: ls dist
+
+      # Wait for tagpr to create the release
+      - name: Wait for release to be created
+        run: |
+          for i in {1..30}; do
+            if gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+              echo "Release found!"
+              break
+            fi
+            echo "Waiting for release to be created... ($i/30)"
+            sleep 10
+          done
+          # Final check
+          gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      # Upload assets to existing release created by tagpr
+      - name: Upload release assets
+        run: |
+          gh release upload "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --clobber dist/*
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+  attestation:
+    timeout-minutes: 10
+    runs-on: ubuntu-24.04
+    needs: [cosign]
+    permissions:
+      id-token: write # required for GitHub Artifact Attestations
+      attestations: write # required for GitHub Artifact Attestations
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: dist
+          path: dist
+
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: cosign
+          path: dist
+
+      - uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        with:
+          subject-path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.txt
+            dist/*.pem
+            dist/*.sig
+            dist/*.sbom.json
+
+  provenance:
+    needs: [build, release]
+    permissions:
+      actions: read # Needed for detection of GitHub Actions environment.
+      id-token: write # Needed for provenance signing and ID
+      contents: write # Needed for release uploads
+    # slsa-framework/slsa-github-generator doesn't support pinning version
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_generic_slsa3.yml@v2.1.0
+    with:
+      base64-subjects: "${{ needs.build.outputs.hashes }}"
+      # Upload provenance to existing release
+      upload-assets: true
