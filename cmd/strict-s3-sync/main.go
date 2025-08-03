@@ -54,7 +54,6 @@ type Summary struct {
 	Created    int `json:"created"`
 	Updated    int `json:"updated"`
 	Deleted    int `json:"deleted"`
-	Skipped    int `json:"skipped"`
 	Failed     int `json:"failed"`
 }
 
@@ -184,16 +183,6 @@ func run(cmd *cobra.Command, args []string) error {
 				}
 				syncResult.Changes = append(syncResult.Changes, change)
 				syncResult.Summary.Deleted++
-			case planner.ActionSkip:
-				change := FileChange{
-					Path:      item.LocalPath,
-					Action:    "skip",
-					LocalPath: item.LocalPath,
-					S3Key:     item.Key,
-					Bucket:    item.Bucket,
-				}
-				syncResult.Changes = append(syncResult.Changes, change)
-				syncResult.Summary.Skipped++
 			}
 		}
 		syncResult.Summary.TotalFiles = len(items)
@@ -287,8 +276,6 @@ func getActionName(action planner.Action) string {
 		return "create" // Use getUploadActionName for accurate create/update distinction
 	case planner.ActionDelete:
 		return "delete"
-	case planner.ActionSkip:
-		return "skip"
 	default:
 		return "unknown"
 	}

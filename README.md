@@ -117,13 +117,12 @@ When using `--result-json-file`, the tool outputs a structured JSON report:
     "created": 1,
     "updated": 1,
     "deleted": 0,
-    "skipped": 0,
     "failed": 0
   }
 }
 ```
 
-Actions can be: `create`, `update`, `delete`, or `skip`.
+Actions can be: `create`, `update`, or `delete`.
 
 ## How it Works
 
