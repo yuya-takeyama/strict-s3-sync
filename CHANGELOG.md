@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.0.9](https://github.com/yuya-takeyama/strict-s3-sync/compare/v0.0.8...v0.0.9) - 2025-08-03
+- feat: add syft for SBOM generation by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/36
+
 ## [v0.0.8](https://github.com/yuya-takeyama/strict-s3-sync/compare/v0.0.7...v0.0.8) - 2025-08-03
 - chore: add third_party_licenses to .gitignore by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/34
 
