@@ -1,5 +1,8 @@
 # Changelog
 
+## [v0.0.12](https://github.com/yuya-takeyama/strict-s3-sync/compare/v0.0.11...v0.0.12) - 2025-08-03
+- Create custom release workflow to coexist with tagpr by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/42
+
 ## [v0.0.11](https://github.com/yuya-takeyama/strict-s3-sync/compare/v0.0.10...v0.0.11) - 2025-08-03
 - Remove cosign configuration for go-release-workflow v6.0.0 by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/40
 
