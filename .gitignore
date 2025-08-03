@@ -38,6 +38,7 @@ CLAUDE.local.json
 # Build output
 /super-s3-sync
 /strict-s3-sync
+third_party_licenses
 
 # Temporary files
 tmp/
