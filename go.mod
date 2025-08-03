@@ -2,8 +2,6 @@ module github.com/yuya-takeyama/strict-s3-sync
 
 go 1.22
 
-toolchain go1.24.4
-
 require (
 	github.com/aws/aws-sdk-go-v2 v1.37.1
 	github.com/aws/aws-sdk-go-v2/config v1.30.2
