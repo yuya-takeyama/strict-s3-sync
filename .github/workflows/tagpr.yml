@@ -21,6 +21,6 @@ jobs:
           app-id: ${{ vars.GH_APP_ID }}
           private-key: ${{ secrets.GH_APP_PRIVATE_KEY }}
       
-      - uses: Songmu/tagpr@v1
+      - uses: Songmu/tagpr@ebb5da0cccdb47c533d4b520ebc0acd475b16614 # v1.7.0
         env:
           GITHUB_TOKEN: ${{ steps.generate_token.outputs.token }}
