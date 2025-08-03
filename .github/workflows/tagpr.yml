@@ -10,8 +10,9 @@ jobs:
       contents: write
       pull-requests: write
       actions: write
+      issues: write
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      - uses: Songmu/tagpr@b84d97fefe5e0a848c01ec7ea59c4ffafc577280 # v1.4.0
+      - uses: Songmu/tagpr@ebb5da052eb05808dd09c92c4ce604d71d8f9233 # v1.7.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
