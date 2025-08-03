@@ -7,6 +7,10 @@
           {
             "type": "command",
             "command": "jq -r '.tool_input.file_path | select(endswith(\".go\"))' | xargs -r -I {} sh -c 'gofmt -w \"$1\" && goimports -w \"$1\"' _ {}"
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path | select(endswith(\".yml\") or endswith(\".yaml\") or endswith(\".json\") or endswith(\".md\"))' | xargs -r -I {} npx prettier --write {}"
           }
         ]
       }
