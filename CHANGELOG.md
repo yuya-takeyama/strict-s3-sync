@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.0.5](https://github.com/yuya-takeyama/strict-s3-sync/compare/v0.0.4...v0.0.5) - 2025-08-03
+- feat(claude): add prettier hooks for YAML, JSON, and Markdown files by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/22
+- feat: add development tools and migrate release workflow by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/24
+
 ## [v0.0.4](https://github.com/yuya-takeyama/strict-s3-sync/compare/v0.0.3...v0.0.4) - 2025-08-03
 - feat(workflows): use GitHub App authentication for tagpr by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/20
 
