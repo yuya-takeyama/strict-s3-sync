@@ -226,12 +226,18 @@ func parseS3URI(uri string) (bucket, prefix string, err error) {
 		return "", "", fmt.Errorf("URI must start with s3://")
 	}
 
-	path := strings.TrimPrefix(uri, "s3://")
-	parts := strings.SplitN(path, "/", 2)
+	s3Path := strings.TrimPrefix(uri, "s3://")
+	parts := strings.SplitN(s3Path, "/", 2)
 
 	bucket = parts[0]
 	if len(parts) > 1 {
-		prefix = parts[1]
+		// Use path.Clean to normalize the prefix
+		// This removes trailing slashes and handles multiple slashes correctly
+		prefix = path.Clean(parts[1])
+		// path.Clean converts empty string to ".", so handle that case
+		if prefix == "." {
+			prefix = ""
+		}
 	}
 
 	if bucket == "" {
