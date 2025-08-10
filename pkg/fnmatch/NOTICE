@@ -1,0 +1,25 @@
+NOTICE - Python fnmatch Module Go Port
+=======================================
+
+This package contains a Go port of Python's fnmatch module.
+
+Original Python fnmatch module:
+Copyright (c) 2001-2024 Python Software Foundation.
+All Rights Reserved.
+Source: https://github.com/python/cpython/blob/main/Lib/fnmatch.py
+Licensed under the Python Software Foundation License Version 2
+
+Go port modifications:
+Copyright (c) 2025 Yuya Takeyama
+Licensed under the MIT License
+
+Summary of changes from the original Python implementation:
+- Ported from Python to Go programming language
+- Adapted to use Go's regexp package instead of Python's re module
+- Implemented caching using sync.Map instead of Python's lru_cache
+- Removed case normalization features (fnmatch vs fnmatchcase distinction)
+- All pattern matching is case-sensitive
+- Maintained the core pattern matching behavior where * matches path separators
+
+The pattern matching behavior is intentionally kept compatible with Python's
+fnmatch module to ensure compatibility with AWS S3 sync exclude patterns.

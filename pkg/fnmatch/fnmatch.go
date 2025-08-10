@@ -3,11 +3,16 @@
 // This implementation is based on Python's fnmatch module from the CPython repository.
 // Original source: https://github.com/python/cpython/blob/main/Lib/fnmatch.py
 //
+// Original Python implementation:
 // Copyright (c) 2001-2024 Python Software Foundation.
 // All Rights Reserved.
+// Licensed under the Python Software Foundation License Version 2
 //
-// This Go port is licensed under the MIT License, but includes code derived from
-// Python's fnmatch module which is licensed under the Python Software Foundation License Version 2.
+// This Go port:
+// Copyright (c) 2025 Yuya Takeyama
+// Licensed under the MIT License
+//
+// See LICENSE-PSF and NOTICE files in this directory for detailed license information.
 //
 // Patterns are Unix shell style:
 //

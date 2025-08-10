@@ -169,3 +169,6 @@ Actions can be: `create`, `update`, or `delete`.
 ## License
 
 MIT
+
+This project includes code derived from Python's fnmatch module (licensed under PSF-2.0).
+See [LICENSE](LICENSE) and [pkg/fnmatch/LICENSE-PSF](pkg/fnmatch/LICENSE-PSF) for details.

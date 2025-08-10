@@ -19,3 +19,13 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+================================================================================
+
+This software includes code derived from Python's fnmatch module.
+See pkg/fnmatch/LICENSE-PSF and pkg/fnmatch/NOTICE for details.
+
+Original Python fnmatch module:
+Copyright (c) 2001-2024 Python Software Foundation.
+All Rights Reserved.
+Licensed under the Python Software Foundation License Version 2
