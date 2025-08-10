@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.3.0](https://github.com/yuya-takeyama/strict-s3-sync/compare/v0.2.0...v0.3.0) - 2025-08-10
+- feat: separate plan and result JSON outputs with improved structure by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/52
+- refactor: rename "action" to "result" field in result JSON by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/54
+
 ## [v0.2.0](https://github.com/yuya-takeyama/strict-s3-sync/compare/v0.1.1...v0.2.0) - 2025-08-10
 - feat: AWS S3 sync compatible exclude patterns by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/50
 
