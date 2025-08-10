@@ -115,7 +115,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
 
       - run: |
-          checksum=$(find dist -name "*checksums.txt")
+          checksum=$(find dist -name "checksums.txt")
           cosign sign-blob -y \
             --output-signature "${checksum}.sig" \
             --output-certificate "${checksum}.pem" \
