@@ -147,22 +147,22 @@ Outputs actual execution results (not generated in dry-run mode):
 {
   "files": [
     {
-      "action": "created",
+      "result": "created",
       "source": "/Users/yuya/project/file1.txt",
       "target": "s3://my-bucket/prefix/file1.txt"
     },
     {
-      "action": "updated",
+      "result": "updated",
       "source": "/Users/yuya/project/file2.txt",
       "target": "s3://my-bucket/prefix/file2.txt"
     },
     {
-      "action": "skipped",
+      "result": "skipped",
       "source": "/Users/yuya/project/file3.txt",
       "target": "s3://my-bucket/prefix/file3.txt"
     },
     {
-      "action": "deleted",
+      "result": "deleted",
       "target": "s3://my-bucket/prefix/old-file.txt"
     }
   ],
@@ -177,7 +177,7 @@ Outputs actual execution results (not generated in dry-run mode):
 }
 ```
 
-Result actions: `skipped`, `created`, `updated`, `deleted` (past tense)
+Result values: `skipped`, `created`, `updated`, `deleted` (past tense)
 
 Failed operations appear in the `errors` array with error messages.
 

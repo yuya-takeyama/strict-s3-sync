@@ -65,7 +65,7 @@ type SyncResult struct {
 }
 
 type ResultFile struct {
-	Action string `json:"action"` // "skipped", "created", "updated", "deleted"
+	Result string `json:"result"` // "skipped", "created", "updated", "deleted"
 	Source string `json:"source,omitempty"`
 	Target string `json:"target"`
 }
@@ -248,21 +248,21 @@ func run(cmd *cobra.Command, args []string) error {
 					syncResult.Summary.Updated++
 				}
 				file := ResultFile{
-					Action: actionPast,
+					Result: actionPast,
 					Source: getAbsolutePath(result.Item.LocalPath),
 					Target: formatS3Path(result.Item.Bucket, result.Item.Key),
 				}
 				syncResult.Files = append(syncResult.Files, file)
 			case planner.ActionDelete:
 				file := ResultFile{
-					Action: "deleted",
+					Result: "deleted",
 					Target: formatS3Path(result.Item.Bucket, result.Item.Key),
 				}
 				syncResult.Files = append(syncResult.Files, file)
 				syncResult.Summary.Deleted++
 			case planner.ActionSkip:
 				file := ResultFile{
-					Action: "skipped",
+					Result: "skipped",
 					Source: getAbsolutePath(result.Item.LocalPath),
 					Target: formatS3Path(result.Item.Bucket, result.Item.Key),
 				}
