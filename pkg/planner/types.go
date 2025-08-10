@@ -64,3 +64,8 @@ type Item struct {
 	Reason    string
 	Checksum  string
 }
+
+type SkippedFile struct {
+	Path   string
+	Reason string
+}

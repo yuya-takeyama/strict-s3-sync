@@ -37,8 +37,14 @@ var (
 )
 
 type SyncResult struct {
-	Changes []FileChange `json:"changes"`
-	Summary Summary      `json:"summary"`
+	Changes []FileChange  `json:"changes"`
+	Summary Summary       `json:"summary"`
+	Skipped []SkippedFile `json:"skipped"`
+}
+
+type SkippedFile struct {
+	Path   string `json:"path"`
+	Reason string `json:"reason"`
 }
 
 type FileChange struct {
@@ -54,6 +60,7 @@ type Summary struct {
 	Updated    int `json:"updated"`
 	Deleted    int `json:"deleted"`
 	Failed     int `json:"failed"`
+	Skipped    int `json:"skipped"`
 }
 
 func main() {
@@ -137,12 +144,26 @@ func run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to generate plan: %w", err)
 	}
 
+	// Get skipped files from planner
+	skippedFiles := plnr.GetSkippedFiles()
+
 	if len(items) == 0 {
 		if resultJSONFile != "" {
-			// Write empty result
+			// Convert skipped files
+			skipped := []SkippedFile{}
+			for _, s := range skippedFiles {
+				skipped = append(skipped, SkippedFile{
+					Path:   s.Path,
+					Reason: s.Reason,
+				})
+			}
+			// Write empty result with skipped files
 			result := SyncResult{
 				Changes: []FileChange{},
-				Summary: Summary{},
+				Summary: Summary{
+					Skipped: len(skipped),
+				},
+				Skipped: skipped,
 			}
 			if err := writeJSONResult(resultJSONFile, result); err != nil {
 				return fmt.Errorf("failed to write JSON result: %w", err)
@@ -181,6 +202,15 @@ func run(cmd *cobra.Command, args []string) error {
 			}
 		}
 		syncResult.Summary.TotalFiles = len(items)
+
+		// Convert and add skipped files
+		for _, s := range skippedFiles {
+			syncResult.Skipped = append(syncResult.Skipped, SkippedFile{
+				Path:   s.Path,
+				Reason: s.Reason,
+			})
+		}
+		syncResult.Summary.Skipped = len(syncResult.Skipped)
 
 		if resultJSONFile != "" {
 			if err := writeJSONResult(resultJSONFile, syncResult); err != nil {
@@ -249,6 +279,15 @@ func run(cmd *cobra.Command, args []string) error {
 		syncResult.Changes = append(syncResult.Changes, change)
 	}
 	syncResult.Summary.TotalFiles = len(results)
+
+	// Convert and add skipped files
+	for _, s := range skippedFiles {
+		syncResult.Skipped = append(syncResult.Skipped, SkippedFile{
+			Path:   s.Path,
+			Reason: s.Reason,
+		})
+	}
+	syncResult.Summary.Skipped = len(syncResult.Skipped)
 
 	if resultJSONFile != "" {
 		if err := writeJSONResult(resultJSONFile, syncResult); err != nil {
