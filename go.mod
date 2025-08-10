@@ -7,7 +7,6 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.30.2
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.18.2
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.85.1
-	github.com/bmatcuk/doublestar/v4 v4.9.1
 	github.com/spf13/cobra v1.9.1
 )
 
