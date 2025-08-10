@@ -33,27 +33,56 @@ var (
 	concurrency    int
 	profile        string
 	region         string
+	planJSONFile   string
 	resultJSONFile string
 )
 
-type SyncResult struct {
-	Changes []FileChange `json:"changes"`
-	Summary Summary      `json:"summary"`
+// PlanResult represents the planned operations before execution
+type PlanResult struct {
+	Files   []PlanFile  `json:"files"`
+	Summary PlanSummary `json:"summary"`
 }
 
-type FileChange struct {
-	Action string `json:"action"`
+type PlanFile struct {
+	Action string `json:"action"` // "skip", "create", "update", "delete"
 	Source string `json:"source,omitempty"`
 	Target string `json:"target"`
-	Error  string `json:"error,omitempty"`
+	Reason string `json:"reason"`
 }
 
-type Summary struct {
-	TotalFiles int `json:"total_files"`
-	Created    int `json:"created"`
-	Updated    int `json:"updated"`
-	Deleted    int `json:"deleted"`
-	Failed     int `json:"failed"`
+type PlanSummary struct {
+	Skip   int `json:"skip"`
+	Create int `json:"create"`
+	Update int `json:"update"`
+	Delete int `json:"delete"`
+}
+
+// SyncResult represents the actual execution results
+type SyncResult struct {
+	Files   []ResultFile  `json:"files"`
+	Errors  []ErrorFile   `json:"errors"`
+	Summary ResultSummary `json:"summary"`
+}
+
+type ResultFile struct {
+	Action string `json:"action"` // "skipped", "created", "updated", "deleted"
+	Source string `json:"source,omitempty"`
+	Target string `json:"target"`
+}
+
+type ErrorFile struct {
+	Action string `json:"action"` // "create", "update", "delete"
+	Source string `json:"source,omitempty"`
+	Target string `json:"target"`
+	Error  string `json:"error"`
+}
+
+type ResultSummary struct {
+	Skipped int `json:"skipped"`
+	Created int `json:"created"`
+	Updated int `json:"updated"`
+	Deleted int `json:"deleted"`
+	Failed  int `json:"failed"`
 }
 
 func main() {
@@ -75,6 +104,7 @@ for accurate file comparison, ensuring data integrity.`,
 	rootCmd.Flags().IntVar(&concurrency, "concurrency", 32, "Number of concurrent operations")
 	rootCmd.Flags().StringVar(&profile, "profile", "", "AWS profile to use")
 	rootCmd.Flags().StringVar(&region, "region", "", "AWS region (uses default if not specified)")
+	rootCmd.Flags().StringVar(&planJSONFile, "plan-json-file", "", "Path to output plan as JSON file")
 	rootCmd.Flags().StringVar(&resultJSONFile, "result-json-file", "", "Path to output result as JSON file")
 
 	if err := rootCmd.Execute(); err != nil {
@@ -137,122 +167,114 @@ func run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to generate plan: %w", err)
 	}
 
+	// Output plan if requested
+	if planJSONFile != "" {
+		if err := writePlanResult(planJSONFile, items); err != nil {
+			return fmt.Errorf("failed to write plan JSON: %w", err)
+		}
+	}
+
 	if len(items) == 0 {
-		if resultJSONFile != "" {
-			// Write empty result
+		if resultJSONFile != "" && !dryRun {
+			// Write empty result for actual execution
 			result := SyncResult{
-				Changes: []FileChange{},
-				Summary: Summary{},
+				Files:   []ResultFile{},
+				Errors:  []ErrorFile{},
+				Summary: ResultSummary{},
 			}
-			if err := writeJSONResult(resultJSONFile, result); err != nil {
-				return fmt.Errorf("failed to write JSON result: %w", err)
+			if err := writeSyncResult(resultJSONFile, result); err != nil {
+				return fmt.Errorf("failed to write result JSON: %w", err)
 			}
 		}
 		return nil
 	}
 
-	var syncResult SyncResult
-
 	if dryRun {
+		// In dry-run mode, just log the operations
 		for _, item := range items {
 			switch item.Action {
 			case planner.ActionUpload:
 				syncLogger.Upload(item.LocalPath, fmt.Sprintf("s3://%s/%s", item.Bucket, item.Key))
-				action := getUploadActionName(item.Reason)
-				change := FileChange{
-					Action: action,
-					Source: getAbsolutePath(item.LocalPath),
-					Target: formatS3Path(item.Bucket, item.Key),
-				}
-				syncResult.Changes = append(syncResult.Changes, change)
-				if action == "create" {
-					syncResult.Summary.Created++
-				} else {
-					syncResult.Summary.Updated++
-				}
 			case planner.ActionDelete:
 				syncLogger.Delete(fmt.Sprintf("s3://%s/%s", item.Bucket, item.Key))
-				change := FileChange{
-					Action: "delete",
-					Target: formatS3Path(item.Bucket, item.Key),
-				}
-				syncResult.Changes = append(syncResult.Changes, change)
-				syncResult.Summary.Deleted++
-			}
-		}
-		syncResult.Summary.TotalFiles = len(items)
-
-		if resultJSONFile != "" {
-			if err := writeJSONResult(resultJSONFile, syncResult); err != nil {
-				return fmt.Errorf("failed to write JSON result: %w", err)
 			}
 		}
 		return nil
 	}
 
+	// Execute the plan
 	exec := executor.NewExecutor(s3Client, syncLogger, concurrency)
 	results := exec.Execute(ctx, items)
 
+	// Process results
+	syncResult := SyncResult{
+		Files:  []ResultFile{},
+		Errors: []ErrorFile{},
+	}
 	var failed int
+
 	for _, result := range results {
-		var change FileChange
 		if result.Error != nil {
 			failed++
 			log.Printf("Error: %s/%s: %v", result.Item.Bucket, result.Item.Key, result.Error)
+
+			// Add to errors array
 			action := getActionName(result.Item.Action)
 			if result.Item.Action == planner.ActionUpload {
 				action = getUploadActionName(result.Item.Reason)
 			}
-			if result.Item.Action == planner.ActionUpload {
-				change = FileChange{
-					Action: action,
-					Source: getAbsolutePath(result.Item.LocalPath),
-					Target: formatS3Path(result.Item.Bucket, result.Item.Key),
-					Error:  result.Error.Error(),
-				}
-			} else {
-				change = FileChange{
-					Action: action,
-					Target: formatS3Path(result.Item.Bucket, result.Item.Key),
-					Error:  result.Error.Error(),
-				}
+
+			errorFile := ErrorFile{
+				Action: action,
+				Target: formatS3Path(result.Item.Bucket, result.Item.Key),
+				Error:  result.Error.Error(),
 			}
+			if result.Item.Action == planner.ActionUpload {
+				errorFile.Source = getAbsolutePath(result.Item.LocalPath)
+			}
+			syncResult.Errors = append(syncResult.Errors, errorFile)
 			syncResult.Summary.Failed++
 		} else {
-			action := getActionName(result.Item.Action)
-			if result.Item.Action == planner.ActionUpload {
-				action = getUploadActionName(result.Item.Reason)
-			}
-			if result.Item.Action == planner.ActionUpload {
-				change = FileChange{
-					Action: action,
+			// Successful operations
+			switch result.Item.Action {
+			case planner.ActionUpload:
+				action := getUploadActionName(result.Item.Reason)
+				var actionPast string
+				if action == "create" {
+					actionPast = "created"
+					syncResult.Summary.Created++
+				} else {
+					actionPast = "updated"
+					syncResult.Summary.Updated++
+				}
+				file := ResultFile{
+					Action: actionPast,
 					Source: getAbsolutePath(result.Item.LocalPath),
 					Target: formatS3Path(result.Item.Bucket, result.Item.Key),
 				}
-			} else {
-				change = FileChange{
-					Action: action,
+				syncResult.Files = append(syncResult.Files, file)
+			case planner.ActionDelete:
+				file := ResultFile{
+					Action: "deleted",
 					Target: formatS3Path(result.Item.Bucket, result.Item.Key),
 				}
-			}
-			switch result.Item.Action {
-			case planner.ActionUpload:
-				if action == "create" {
-					syncResult.Summary.Created++
-				} else {
-					syncResult.Summary.Updated++
-				}
-			case planner.ActionDelete:
+				syncResult.Files = append(syncResult.Files, file)
 				syncResult.Summary.Deleted++
+			case planner.ActionSkip:
+				file := ResultFile{
+					Action: "skipped",
+					Source: getAbsolutePath(result.Item.LocalPath),
+					Target: formatS3Path(result.Item.Bucket, result.Item.Key),
+				}
+				syncResult.Files = append(syncResult.Files, file)
+				syncResult.Summary.Skipped++
 			}
 		}
-		syncResult.Changes = append(syncResult.Changes, change)
 	}
-	syncResult.Summary.TotalFiles = len(results)
 
 	if resultJSONFile != "" {
-		if err := writeJSONResult(resultJSONFile, syncResult); err != nil {
-			return fmt.Errorf("failed to write JSON result: %w", err)
+		if err := writeSyncResult(resultJSONFile, syncResult); err != nil {
+			return fmt.Errorf("failed to write result JSON: %w", err)
 		}
 	}
 
@@ -263,7 +285,57 @@ func run(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func writeJSONResult(path string, result SyncResult) error {
+func writePlanResult(path string, items []planner.Item) error {
+	var plan PlanResult
+
+	for _, item := range items {
+		var file PlanFile
+		switch item.Action {
+		case planner.ActionUpload:
+			action := getUploadActionName(item.Reason)
+			file = PlanFile{
+				Action: action,
+				Source: getAbsolutePath(item.LocalPath),
+				Target: formatS3Path(item.Bucket, item.Key),
+				Reason: item.Reason,
+			}
+			if action == "create" {
+				plan.Summary.Create++
+			} else {
+				plan.Summary.Update++
+			}
+		case planner.ActionDelete:
+			file = PlanFile{
+				Action: "delete",
+				Target: formatS3Path(item.Bucket, item.Key),
+				Reason: item.Reason,
+			}
+			plan.Summary.Delete++
+		case planner.ActionSkip:
+			file = PlanFile{
+				Action: "skip",
+				Source: getAbsolutePath(item.LocalPath),
+				Target: formatS3Path(item.Bucket, item.Key),
+				Reason: item.Reason,
+			}
+			plan.Summary.Skip++
+		}
+		plan.Files = append(plan.Files, file)
+	}
+
+	data, err := json.MarshalIndent(plan, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal JSON: %w", err)
+	}
+
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return fmt.Errorf("failed to write file: %w", err)
+	}
+
+	return nil
+}
+
+func writeSyncResult(path string, result SyncResult) error {
 	data, err := json.MarshalIndent(result, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal JSON: %w", err)
@@ -282,6 +354,8 @@ func getActionName(action planner.Action) string {
 		return "create" // Use getUploadActionName for accurate create/update distinction
 	case planner.ActionDelete:
 		return "delete"
+	case planner.ActionSkip:
+		return "skip"
 	default:
 		return "unknown"
 	}

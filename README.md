@@ -56,7 +56,8 @@ strict-s3-sync <LocalPath> <S3Uri> [options]
 - `--profile <profile>`: AWS profile to use
 - `--region <region>`: AWS region (uses default if not specified)
 - `--quiet`: Suppress output
-- `--result-json-file <path>`: Output sync results to a JSON file (useful for CI/CD pipelines)
+- `--plan-json-file <path>`: Output execution plan to a JSON file
+- `--result-json-file <path>`: Output execution results to a JSON file (not generated in dry-run mode)
 
 ### Examples
 
@@ -84,36 +85,90 @@ Dry run to preview changes:
 strict-s3-sync ./local-folder s3://my-bucket/prefix/ --delete --dryrun
 ```
 
-Generate JSON report for CI/CD:
+Generate JSON reports for CI/CD:
 
 ```bash
-strict-s3-sync ./local-folder s3://my-bucket/prefix/ --result-json-file sync-result.json
+# Output both plan and result
+strict-s3-sync ./local-folder s3://my-bucket/prefix/ --plan-json-file plan.json --result-json-file result.json
+
+# Output only plan (useful with dry-run)
+strict-s3-sync ./local-folder s3://my-bucket/prefix/ --dryrun --plan-json-file plan.json
 ```
 
-## JSON Output Format
+## JSON Output Formats
 
-When using `--result-json-file`, the tool outputs a structured JSON report:
+### Plan JSON (`--plan-json-file`)
+
+Outputs the execution plan before any operations:
 
 ```json
 {
-  "changes": [
+  "files": [
     {
       "action": "create",
       "source": "/Users/yuya/project/file1.txt",
-      "target": "s3://my-bucket/prefix/file1.txt"
+      "target": "s3://my-bucket/prefix/file1.txt",
+      "reason": "new file"
     },
     {
       "action": "update",
       "source": "/Users/yuya/project/file2.txt",
-      "target": "s3://my-bucket/prefix/file2.txt"
+      "target": "s3://my-bucket/prefix/file2.txt",
+      "reason": "checksum differs"
+    },
+    {
+      "action": "skip",
+      "source": "/Users/yuya/project/file3.txt",
+      "target": "s3://my-bucket/prefix/file3.txt",
+      "reason": "unchanged"
     },
     {
       "action": "delete",
-      "target": "s3://my-bucket/prefix/old-file.txt"
+      "target": "s3://my-bucket/prefix/old-file.txt",
+      "reason": "deleted locally"
     }
   ],
   "summary": {
-    "total_files": 3,
+    "skip": 1,
+    "create": 1,
+    "update": 1,
+    "delete": 1
+  }
+}
+```
+
+Plan actions: `skip`, `create`, `update`, `delete` (present tense)
+
+### Result JSON (`--result-json-file`)
+
+Outputs actual execution results (not generated in dry-run mode):
+
+```json
+{
+  "files": [
+    {
+      "action": "created",
+      "source": "/Users/yuya/project/file1.txt",
+      "target": "s3://my-bucket/prefix/file1.txt"
+    },
+    {
+      "action": "updated",
+      "source": "/Users/yuya/project/file2.txt",
+      "target": "s3://my-bucket/prefix/file2.txt"
+    },
+    {
+      "action": "skipped",
+      "source": "/Users/yuya/project/file3.txt",
+      "target": "s3://my-bucket/prefix/file3.txt"
+    },
+    {
+      "action": "deleted",
+      "target": "s3://my-bucket/prefix/old-file.txt"
+    }
+  ],
+  "errors": [],
+  "summary": {
+    "skipped": 1,
     "created": 1,
     "updated": 1,
     "deleted": 1,
@@ -122,7 +177,9 @@ When using `--result-json-file`, the tool outputs a structured JSON report:
 }
 ```
 
-Actions can be: `create`, `update`, or `delete`.
+Result actions: `skipped`, `created`, `updated`, `deleted` (past tense)
+
+Failed operations appear in the `errors` array with error messages.
 
 ## How it Works
 

@@ -270,7 +270,16 @@ func TestPhase3GeneratePlan(t *testing.T) {
 			localBase: "/local",
 			bucket:    "test-bucket",
 			prefix:    "prefix",
-			want:      []Item{},
+			want: []Item{
+				{
+					Action:    ActionSkip,
+					LocalPath: "/local/file1.txt",
+					Bucket:    "test-bucket",
+					Key:       "prefix/file1.txt",
+					Size:      100,
+					Reason:    "unchanged",
+				},
+			},
 		},
 		{
 			name: "deleted files",
