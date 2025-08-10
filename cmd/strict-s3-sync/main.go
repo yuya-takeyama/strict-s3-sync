@@ -207,7 +207,10 @@ func run(cmd *cobra.Command, args []string) error {
 	results := exec.Execute(ctx, items)
 
 	// Process results
-	var syncResult SyncResult
+	syncResult := SyncResult{
+		Files:  []ResultFile{},
+		Errors: []ErrorFile{},
+	}
 	var failed int
 
 	for _, result := range results {
