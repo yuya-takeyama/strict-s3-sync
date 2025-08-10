@@ -85,7 +85,42 @@ func TestParseS3URI(t *testing.T) {
 			name:       "bucket with nested prefix",
 			uri:        "s3://mybucket/prefix/subdir/",
 			wantBucket: "mybucket",
-			wantPrefix: "prefix/subdir/",
+			wantPrefix: "prefix/subdir", // Trailing slash should be removed by path.Clean
+			wantErr:    false,
+		},
+		{
+			name:       "bucket with multiple trailing slashes",
+			uri:        "s3://mybucket/prefix///",
+			wantBucket: "mybucket",
+			wantPrefix: "prefix", // Multiple slashes should be normalized
+			wantErr:    false,
+		},
+		{
+			name:       "bucket with multiple internal slashes",
+			uri:        "s3://mybucket/prefix//subdir///file",
+			wantBucket: "mybucket",
+			wantPrefix: "prefix/subdir/file", // Internal slashes should be normalized
+			wantErr:    false,
+		},
+		{
+			name:       "bucket with single slash",
+			uri:        "s3://mybucket/",
+			wantBucket: "mybucket",
+			wantPrefix: "", // Single slash should result in empty prefix
+			wantErr:    false,
+		},
+		{
+			name:       "real-world example without trailing slash",
+			uri:        "s3://example-bucket/media/images/files",
+			wantBucket: "example-bucket",
+			wantPrefix: "media/images/files",
+			wantErr:    false,
+		},
+		{
+			name:       "real-world example with trailing slash",
+			uri:        "s3://example-bucket/media/images/files/",
+			wantBucket: "example-bucket",
+			wantPrefix: "media/images/files", // Should be normalized
 			wantErr:    false,
 		},
 		{

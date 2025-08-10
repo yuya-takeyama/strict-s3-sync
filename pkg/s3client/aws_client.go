@@ -12,6 +12,16 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
+// trimS3KeyPrefix removes the prefix from an S3 key.
+// It expects the prefix to be normalized (without trailing slash).
+// The function adds a "/" to the prefix before trimming to handle S3's path structure correctly.
+func trimS3KeyPrefix(key, prefix string) string {
+	if prefix == "" {
+		return key
+	}
+	return strings.TrimPrefix(key, prefix+"/")
+}
+
 const (
 	MultipartThreshold       = 8 * 1024 * 1024        // 8MB - AWS CLI default threshold
 	MultipartMandatory       = 5 * 1024 * 1024 * 1024 // 5GB - AWS limit
@@ -51,10 +61,7 @@ func (c *AWSClient) ListObjects(ctx context.Context, req *ListObjectsRequest) ([
 				continue
 			}
 
-			key := *obj.Key
-			if req.Prefix != "" {
-				key = strings.TrimPrefix(key, req.Prefix+"/")
-			}
+			key := trimS3KeyPrefix(*obj.Key, req.Prefix)
 
 			items = append(items, ItemMetadata{
 				Path:    key,
