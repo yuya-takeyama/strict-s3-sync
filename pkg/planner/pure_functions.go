@@ -102,6 +102,16 @@ func Phase3GeneratePlan(phase1 Phase1Result, checksums []ChecksumData, localBase
 					Size:      ref.Size,
 					Reason:    "checksum differs",
 				})
+			} else {
+				// Checksum matches, file is unchanged
+				items = append(items, Item{
+					Action:    ActionSkip,
+					LocalPath: filepath.Join(localBase, ref.Path),
+					Bucket:    bucket,
+					Key:       path.Join(prefix, ref.Path),
+					Size:      ref.Size,
+					Reason:    "unchanged",
+				})
 			}
 		}
 	}

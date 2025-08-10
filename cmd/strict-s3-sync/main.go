@@ -37,20 +37,15 @@ var (
 )
 
 type SyncResult struct {
-	Changes []FileChange  `json:"changes"`
-	Summary Summary       `json:"summary"`
-	Skipped []SkippedFile `json:"skipped"`
+	Files   []File  `json:"files"`
+	Summary Summary `json:"summary"`
 }
 
-type SkippedFile struct {
-	Path   string `json:"path"`
-	Reason string `json:"reason"`
-}
-
-type FileChange struct {
-	Action string `json:"action"`
+type File struct {
+	Action string `json:"action"` // "create", "update", "delete", "skip"
 	Source string `json:"source,omitempty"`
-	Target string `json:"target"`
+	Target string `json:"target,omitempty"`
+	Reason string `json:"reason,omitempty"`
 	Error  string `json:"error,omitempty"`
 }
 
@@ -60,7 +55,6 @@ type Summary struct {
 	Updated    int `json:"updated"`
 	Deleted    int `json:"deleted"`
 	Failed     int `json:"failed"`
-	Skipped    int `json:"skipped"`
 }
 
 func main() {
@@ -144,26 +138,12 @@ func run(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("failed to generate plan: %w", err)
 	}
 
-	// Get skipped files from planner
-	skippedFiles := plnr.GetSkippedFiles()
-
 	if len(items) == 0 {
 		if resultJSONFile != "" {
-			// Convert skipped files
-			skipped := []SkippedFile{}
-			for _, s := range skippedFiles {
-				skipped = append(skipped, SkippedFile{
-					Path:   s.Path,
-					Reason: s.Reason,
-				})
-			}
-			// Write empty result with skipped files
+			// Write empty result
 			result := SyncResult{
-				Changes: []FileChange{},
-				Summary: Summary{
-					Skipped: len(skipped),
-				},
-				Skipped: skipped,
+				Files:   []File{},
+				Summary: Summary{},
 			}
 			if err := writeJSONResult(resultJSONFile, result); err != nil {
 				return fmt.Errorf("failed to write JSON result: %w", err)
@@ -180,12 +160,13 @@ func run(cmd *cobra.Command, args []string) error {
 			case planner.ActionUpload:
 				syncLogger.Upload(item.LocalPath, fmt.Sprintf("s3://%s/%s", item.Bucket, item.Key))
 				action := getUploadActionName(item.Reason)
-				change := FileChange{
+				file := File{
 					Action: action,
 					Source: getAbsolutePath(item.LocalPath),
 					Target: formatS3Path(item.Bucket, item.Key),
+					Reason: item.Reason,
 				}
-				syncResult.Changes = append(syncResult.Changes, change)
+				syncResult.Files = append(syncResult.Files, file)
 				if action == "create" {
 					syncResult.Summary.Created++
 				} else {
@@ -193,24 +174,25 @@ func run(cmd *cobra.Command, args []string) error {
 				}
 			case planner.ActionDelete:
 				syncLogger.Delete(fmt.Sprintf("s3://%s/%s", item.Bucket, item.Key))
-				change := FileChange{
+				file := File{
 					Action: "delete",
 					Target: formatS3Path(item.Bucket, item.Key),
+					Reason: item.Reason,
 				}
-				syncResult.Changes = append(syncResult.Changes, change)
+				syncResult.Files = append(syncResult.Files, file)
 				syncResult.Summary.Deleted++
+			case planner.ActionSkip:
+				// Include skipped files (unchanged) in the result
+				file := File{
+					Action: "skip",
+					Source: getAbsolutePath(item.LocalPath),
+					Target: formatS3Path(item.Bucket, item.Key),
+					Reason: item.Reason,
+				}
+				syncResult.Files = append(syncResult.Files, file)
 			}
 		}
 		syncResult.Summary.TotalFiles = len(items)
-
-		// Convert and add skipped files
-		for _, s := range skippedFiles {
-			syncResult.Skipped = append(syncResult.Skipped, SkippedFile{
-				Path:   s.Path,
-				Reason: s.Reason,
-			})
-		}
-		syncResult.Summary.Skipped = len(syncResult.Skipped)
 
 		if resultJSONFile != "" {
 			if err := writeJSONResult(resultJSONFile, syncResult); err != nil {
@@ -225,7 +207,7 @@ func run(cmd *cobra.Command, args []string) error {
 
 	var failed int
 	for _, result := range results {
-		var change FileChange
+		var file File
 		if result.Error != nil {
 			failed++
 			log.Printf("Error: %s/%s: %v", result.Item.Bucket, result.Item.Key, result.Error)
@@ -234,16 +216,18 @@ func run(cmd *cobra.Command, args []string) error {
 				action = getUploadActionName(result.Item.Reason)
 			}
 			if result.Item.Action == planner.ActionUpload {
-				change = FileChange{
+				file = File{
 					Action: action,
 					Source: getAbsolutePath(result.Item.LocalPath),
 					Target: formatS3Path(result.Item.Bucket, result.Item.Key),
+					Reason: result.Item.Reason,
 					Error:  result.Error.Error(),
 				}
 			} else {
-				change = FileChange{
+				file = File{
 					Action: action,
 					Target: formatS3Path(result.Item.Bucket, result.Item.Key),
+					Reason: result.Item.Reason,
 					Error:  result.Error.Error(),
 				}
 			}
@@ -254,15 +238,25 @@ func run(cmd *cobra.Command, args []string) error {
 				action = getUploadActionName(result.Item.Reason)
 			}
 			if result.Item.Action == planner.ActionUpload {
-				change = FileChange{
+				file = File{
 					Action: action,
 					Source: getAbsolutePath(result.Item.LocalPath),
 					Target: formatS3Path(result.Item.Bucket, result.Item.Key),
+					Reason: result.Item.Reason,
 				}
-			} else {
-				change = FileChange{
+			} else if result.Item.Action == planner.ActionDelete {
+				file = File{
 					Action: action,
 					Target: formatS3Path(result.Item.Bucket, result.Item.Key),
+					Reason: result.Item.Reason,
+				}
+			} else if result.Item.Action == planner.ActionSkip {
+				// ActionSkip items are included in the result
+				file = File{
+					Action: "skip",
+					Source: getAbsolutePath(result.Item.LocalPath),
+					Target: formatS3Path(result.Item.Bucket, result.Item.Key),
+					Reason: result.Item.Reason,
 				}
 			}
 			switch result.Item.Action {
@@ -276,18 +270,9 @@ func run(cmd *cobra.Command, args []string) error {
 				syncResult.Summary.Deleted++
 			}
 		}
-		syncResult.Changes = append(syncResult.Changes, change)
+		syncResult.Files = append(syncResult.Files, file)
 	}
 	syncResult.Summary.TotalFiles = len(results)
-
-	// Convert and add skipped files
-	for _, s := range skippedFiles {
-		syncResult.Skipped = append(syncResult.Skipped, SkippedFile{
-			Path:   s.Path,
-			Reason: s.Reason,
-		})
-	}
-	syncResult.Summary.Skipped = len(syncResult.Skipped)
 
 	if resultJSONFile != "" {
 		if err := writeJSONResult(resultJSONFile, syncResult); err != nil {
@@ -321,6 +306,8 @@ func getActionName(action planner.Action) string {
 		return "create" // Use getUploadActionName for accurate create/update distinction
 	case planner.ActionDelete:
 		return "delete"
+	case planner.ActionSkip:
+		return "skip"
 	default:
 		return "unknown"
 	}

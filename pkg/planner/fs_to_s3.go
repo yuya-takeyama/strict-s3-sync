@@ -19,21 +19,15 @@ import (
 var crc64NVMETable = crc64.MakeTable(0x9a6c9329ac4bc9b5)
 
 type FSToS3Planner struct {
-	client       s3client.Client
-	logger       logger.Logger
-	skippedFiles []SkippedFile
+	client s3client.Client
+	logger logger.Logger
 }
 
 func NewFSToS3Planner(client s3client.Client, logger logger.Logger) *FSToS3Planner {
 	return &FSToS3Planner{
-		client:       client,
-		logger:       logger,
-		skippedFiles: []SkippedFile{},
+		client: client,
+		logger: logger,
 	}
-}
-
-func (p *FSToS3Planner) GetSkippedFiles() []SkippedFile {
-	return p.skippedFiles
 }
 
 func (p *FSToS3Planner) Plan(ctx context.Context, source Source, dest Destination, opts Options) ([]Item, error) {
@@ -49,14 +43,10 @@ func (p *FSToS3Planner) Plan(ctx context.Context, source Source, dest Destinatio
 		return nil, fmt.Errorf("invalid S3 URI: %w", err)
 	}
 
-	// Reset skipped files for each Plan call
-	p.skippedFiles = []SkippedFile{}
-
-	localFiles, skippedLocal, err := p.gatherLocalFiles(source.Path, opts.Excludes)
+	localFiles, err := p.gatherLocalFiles(source.Path, opts.Excludes)
 	if err != nil {
 		return nil, fmt.Errorf("failed to gather local files: %w", err)
 	}
-	p.skippedFiles = append(p.skippedFiles, skippedLocal...)
 
 	s3ClientObjects, err := p.client.ListObjects(ctx, &s3client.ListObjectsRequest{
 		Bucket: bucket,
@@ -74,10 +64,6 @@ func (p *FSToS3Planner) Plan(ctx context.Context, source Source, dest Destinatio
 			return nil, fmt.Errorf("failed to check exclude pattern for %s: %w", obj.Path, err)
 		}
 		if excluded {
-			p.skippedFiles = append(p.skippedFiles, SkippedFile{
-				Path:   fmt.Sprintf("s3://%s/%s", bucket, obj.Path),
-				Reason: "excluded by pattern",
-			})
 			continue
 		}
 
@@ -112,9 +98,8 @@ func (p *FSToS3Planner) Plan(ctx context.Context, source Source, dest Destinatio
 	return items, nil
 }
 
-func (p *FSToS3Planner) gatherLocalFiles(basePath string, excludes []string) ([]ItemMetadata, []SkippedFile, error) {
+func (p *FSToS3Planner) gatherLocalFiles(basePath string, excludes []string) ([]ItemMetadata, error) {
 	var items []ItemMetadata
-	var skipped []SkippedFile
 
 	err := filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -137,11 +122,6 @@ func (p *FSToS3Planner) gatherLocalFiles(basePath string, excludes []string) ([]
 			return err
 		}
 		if excluded {
-			absPath, _ := filepath.Abs(path)
-			skipped = append(skipped, SkippedFile{
-				Path:   absPath,
-				Reason: "excluded by pattern",
-			})
 			return nil
 		}
 
@@ -154,7 +134,7 @@ func (p *FSToS3Planner) gatherLocalFiles(basePath string, excludes []string) ([]
 		return nil
 	})
 
-	return items, skipped, err
+	return items, err
 }
 
 func (p *FSToS3Planner) Phase2CollectChecksums(ctx context.Context, items []ItemRef, localBase string, bucket string, prefix string) ([]ChecksumData, error) {
