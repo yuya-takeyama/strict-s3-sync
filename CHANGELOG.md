@@ -1,5 +1,9 @@
 # Changelog
 
+## [v0.1.1](https://github.com/yuya-takeyama/strict-s3-sync/compare/v0.1.0...v0.1.1) - 2025-08-10
+- fix: normalize S3 URI prefix to handle trailing slashes consistently by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/47
+- chore: simplify checksum filename to checksums.txt by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/49
+
 ## [v0.1.0](https://github.com/yuya-takeyama/strict-s3-sync/compare/v0.0.12...v0.1.0) - 2025-08-03
 - feat: add --result-json-file option for programmatic result processing by @yuya-takeyama in https://github.com/yuya-takeyama/strict-s3-sync/pull/44
 
