@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/bmatcuk/doublestar/v4"
+	"github.com/yuya-takeyama/strict-s3-sync/pkg/fnmatch"
 )
 
 func Phase1Compare(source []ItemMetadata, dest []ItemMetadata, deleteEnabled bool) Phase1Result {
@@ -143,7 +143,7 @@ func sortPhase1Result(result *Phase1Result) {
 
 func IsExcluded(path string, patterns []string) (bool, error) {
 	for _, pattern := range patterns {
-		matched, err := doublestar.Match(pattern, path)
+		matched, err := fnmatch.Match(pattern, path)
 		if err != nil {
 			return false, err
 		}

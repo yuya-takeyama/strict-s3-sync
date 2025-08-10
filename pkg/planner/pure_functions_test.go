@@ -394,14 +394,14 @@ func TestIsExcluded(t *testing.T) {
 		{
 			name:     "directory match",
 			path:     "node_modules/package.json",
-			patterns: []string{"node_modules/**"},
+			patterns: []string{"node_modules/*"},
 			want:     true,
 			wantErr:  false,
 		},
 		{
 			name:     "nested directory match",
 			path:     "src/test/data.tmp",
-			patterns: []string{"**/*.tmp"},
+			patterns: []string{"*.tmp"},
 			want:     true,
 			wantErr:  false,
 		},
@@ -426,11 +426,26 @@ func TestIsExcluded(t *testing.T) {
 			want:     true,
 			wantErr:  false,
 		},
+		// AWS S3 sync compatible behavior tests
+		{
+			name:     "aws compat: star matches across directories",
+			path:     "_next/subdir/file.txt",
+			patterns: []string{"_next/*"},
+			want:     true, // With fnmatch, * matches path separators
+			wantErr:  false,
+		},
+		{
+			name:     "aws compat: deeply nested match",
+			path:     "_next/subdir/deep/file.txt",
+			patterns: []string{"_next/*"},
+			want:     true, // With fnmatch, * matches path separators
+			wantErr:  false,
+		},
 		{
 			name:     "complex pattern",
 			path:     "src/components/Button.test.tsx",
-			patterns: []string{"**/*.test.*"},
-			want:     true,
+			patterns: []string{"*.test.*"},
+			want:     true, // With fnmatch, * matches path separators
 			wantErr:  false,
 		},
 		{
@@ -443,7 +458,7 @@ func TestIsExcluded(t *testing.T) {
 		{
 			name:     "hidden files",
 			path:     ".git/config",
-			patterns: []string{".git/**"},
+			patterns: []string{".git/*"},
 			want:     true,
 			wantErr:  false,
 		},
